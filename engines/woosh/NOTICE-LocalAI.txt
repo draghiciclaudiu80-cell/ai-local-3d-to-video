@@ -1,0 +1,11 @@
+Woosh (Sony AI) — https://github.com/SonyResearch/Woosh
+Code: MIT / Apache-2.0 (see Woosh/LICENSE.*). Model weights: CC-BY-NC 4.0 = non-commercial use only.
+Synchformer weights (checkpoints/synchformer_state_dict.pth) from https://huggingface.co/hkchengrex/MMAudio (ext_weights).
+
+Changes made for Local AI:
+- Woosh/woosh/model/dit_types.py: "type DictTensor = ..." (Python 3.12 syntax) -> "DictTensor = ..." so it runs on the
+  app's bundled Python 3.11.
+- run_sfx.py (ours) replaces two things at run time, without editing Woosh's files: Synchformer is loaded from
+  checkpoints/ instead of being downloaded, and roberta-large is built from its config (Woosh's own checkpoint holds
+  the weights).
+- Installed: engines/woosh/venv (torch 2.8.0 CPU + the libraries Woosh needs); models in engines/woosh/checkpoints.

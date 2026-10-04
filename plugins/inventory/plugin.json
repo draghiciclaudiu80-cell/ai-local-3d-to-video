@@ -1,0 +1,25 @@
+{
+  "id": "inventory",
+  "name": "Parts inventory",
+  "kind": "calculator",
+  "about": "Your parts list (like InvenTree / PartsBox, kept simple): screws, nuts, bearings, springs, electronics, filament, tools — how many and where. Say \"add 50 M3x10 screws, drawer A1\", \"I used 4 608 bearings\", \"do I have 10k resistors?\" or \"check: 4 M3 screws, 2 608 bearings\". Stored only on this PC (data/inventory.json).",
+  "description": "The user's own parts inventory: list or find parts, add / use (take out) / set / remove items with quantity and location, or check whether a parts list is in stock. Use it when the user asks what parts they have, says they bought or used parts, or before suggesting parts to buy.",
+  "triggers": ["inventory", "inventar", "in stock", "in my stock", "do i have any", "do i still have", "how many do i have", "my parts", "parts box", "parts bin", "parts list", "stock list", "add to stock", "am in stoc", "am pe stoc", "ce piese am"],
+  "trigger_re": ["\\bhow many\\b.{0,40}\\bdo i (?:still )?have\\b", "\\bdo i (?:still )?have (?:any |enough |some )?(?:\\w+ ){0,3}(?:screws?|bolts?|nuts?|washers?|bearings?|resistors?|capacitors?|filament|springs?|leds?|motors?|servos?|inserts?|magnets?|parts?)\\b", "\\b(?:i|we) (?:just )?(?:bought|got|ordered|received|used|took|used up)\\b.{0,40}\\b(?:screws?|bolts?|nuts?|washers?|bearings?|resistors?|capacitors?|filament|springs?|leds?|motors?|servos?|inserts?|magnets?)\\b"],
+  "run": ["{python}", "{plugin}/inventory.py", "{input}", "{outdir}"],
+  "timeout": 20,
+  "parameters": {
+    "type": "object",
+    "required": ["action"],
+    "properties": {
+      "action": {"type": "string", "enum": ["list", "find", "add", "use", "set", "remove", "check"]},
+      "query": {"type": "string", "maxLength": 80},
+      "items": {"type": "array", "maxItems": 30, "items": {"type": "object", "required": ["name"], "properties": {
+        "name": {"type": "string", "maxLength": 80}, "qty": {"type": "number"}, "unit": {"type": "string", "maxLength": 12},
+        "category": {"type": "string", "maxLength": 30}, "location": {"type": "string", "maxLength": 40},
+        "value": {"type": "string", "maxLength": 20}, "package": {"type": "string", "maxLength": 20},
+        "note": {"type": "string", "maxLength": 80}, "min": {"type": "number"}}}}
+    }
+  },
+  "instructions": "Turn the request into an inventory action. list = show everything (or a category in query); find = look for parts (query = what); add = the user got / has parts (items with name, qty, location, category: screws, nuts, bearings, electronics, filament, tools…); use = parts taken out or used up (items with name, qty); set = the real count now; remove = delete from the list; check = are these parts in stock (items with name, qty). Names short and plain: \"M3x10 screw\", \"608 bearing\", \"10k resistor 0805\", \"PLA black 1 kg\". Example: {\"action\": \"add\", \"items\": [{\"name\": \"M3x10 screw\", \"qty\": 50, \"location\": \"drawer A1\", \"category\": \"screws\"}]}. Answer with the JSON only."
+}

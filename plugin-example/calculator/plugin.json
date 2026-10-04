@@ -1,0 +1,12 @@
+{
+  "id": "calculator",
+  "name": "Exact calculator",
+  "about": "Example plugin: copy this folder to make your own. Does maths exactly (small models are bad at arithmetic).",
+  "description": "Calculates a maths expression exactly: + - * / ** % ( ), sqrt, sin, cos, tan, log, pi, e. Use it for any arithmetic or percentages.",
+  "triggers": ["calculate", "calculeaza", "cat face", "how much is"],
+  "run": ["{python}", "{plugin}/main.py", "{input}", "{outdir}"],
+  "timeout": 20,
+  "parameters": {"type": "object", "required": ["expression"],
+                 "properties": {"expression": {"type": "string", "description": "e.g. 2340 * 17.5 / 100"}}},
+  "instructions": "Write the calculation as one Python maths expression. Percentages: 17.5% of 2340 -> 2340 * 17.5 / 100. Square root: sqrt(2). Example: {\"expression\": \"(12.5 + 7) * 3\"}"
+}

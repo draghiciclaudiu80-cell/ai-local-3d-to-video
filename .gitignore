@@ -1,0 +1,26 @@
+# what the installers download or the app makes — never in the repository
+/.venv/
+/engines/*/venv/
+/engines/python/
+/engines/llama/
+/engines/sd/
+/engines/tor/
+/engines/blender/
+/engines/orcaslicer/
+/engines/freecad/
+/engines/dotnet/
+/engines/dotnet-home/
+/engines/picogk/Runner/bin/
+/engines/picogk/Runner/obj/
+/engines/woosh/checkpoints/*/
+/engines/woosh/checkpoints/*.pth
+/models/
+/downloads/
+/data/*
+!/data/registry.json
+!/data/piper_voices.json
+/Local AI.exe
+__pycache__/
+*.pyc
+*.log
+*.part

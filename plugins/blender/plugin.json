@@ -1,0 +1,255 @@
+{
+  "id": "blender",
+  "name": "Blender 3D",
+  "about": "Uses the Blender installed on this PC (background, factory settings, no add-ons, no auto-run scripts). The AI only writes a recipe (data) — a fixed script builds it: rounded edges, smooth shapes, colours, a rendered picture, STL per part + GLB. Best for furniture, cases, stands, decorative and smooth objects.",
+  "description": "Makes 3D models in BLENDER from a recipe: furniture (a ready-made parametric cabinet with drawers and doors), cases, stands, holders, smooth or rounded objects, text, coloured models; exports STL per part and GLB, and renders a picture. Use it when the user says Blender, or for furniture / cabinets / shelves, or when they want a rendered, coloured model.",
+  "triggers": [
+    "blender",
+    "in blender",
+    "with blender",
+    "cu blender"
+  ],
+  "requires": [
+    "%ProgramFiles%/Blender Foundation/Blender */blender.exe",
+    "%ProgramFiles(x86)%/Steam/steamapps/common/Blender/blender.exe",
+    "%LOCALAPPDATA%/Programs/Blender Foundation/Blender */blender.exe",
+    "{engines}/blender/blender.exe",
+    "{engines}/blender/blender",
+    "/usr/bin/blender",
+    "/usr/local/bin/blender"
+  ],
+  "run": [
+    "{python}",
+    "{plugin}/run.py",
+    "{input}",
+    "{outdir}"
+  ],
+  "timeout": 300,
+  "parameters": {
+    "type": "object",
+    "required": [
+      "name",
+      "template"
+    ],
+    "properties": {
+      "name": {
+        "type": "string",
+        "maxLength": 60
+      },
+      "template": {
+        "type": "string",
+        "enum": [
+          "cabinet",
+          "none"
+        ]
+      },
+      "options": {
+        "type": "object",
+        "properties": {
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          },
+          "depth": {
+            "type": "number"
+          },
+          "drawers": {
+            "type": "integer"
+          },
+          "doors": {
+            "type": "integer"
+          },
+          "board": {
+            "type": "number"
+          },
+          "color": {
+            "type": "string"
+          },
+          "handle_color": {
+            "type": "string"
+          }
+        }
+      },
+      "parts": {
+        "type": "array",
+        "maxItems": 40,
+        "items": {
+          "type": "object",
+          "required": [
+            "name",
+            "shape",
+            "location"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "shape": {
+              "type": "string",
+              "enum": [
+                "box",
+                "cylinder",
+                "sphere",
+                "cone",
+                "torus",
+                "text"
+              ]
+            },
+            "size": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3
+            },
+            "radius": {
+              "type": "number"
+            },
+            "radius2": {
+              "type": "number"
+            },
+            "depth": {
+              "type": "number"
+            },
+            "major": {
+              "type": "number"
+            },
+            "minor": {
+              "type": "number"
+            },
+            "text": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "font_size": {
+              "type": "number"
+            },
+            "location": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3
+            },
+            "rotation": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3
+            },
+            "bevel": {
+              "type": "number"
+            },
+            "smooth": {
+              "type": "boolean"
+            },
+            "subdivide": {
+              "type": "integer"
+            },
+            "cut": {
+              "type": "array",
+              "maxItems": 12,
+              "items": {
+                "type": "object",
+                "required": [
+                  "shape",
+                  "location"
+                ],
+                "properties": {
+                  "shape": {
+                    "type": "string",
+                    "enum": [
+                      "box",
+                      "cylinder",
+                      "sphere",
+                      "cone",
+                      "torus"
+                    ]
+                  },
+                  "size": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    }
+                  },
+                  "radius": {
+                    "type": "number"
+                  },
+                  "radius2": {
+                    "type": "number"
+                  },
+                  "depth": {
+                    "type": "number"
+                  },
+                  "major": {
+                    "type": "number"
+                  },
+                  "minor": {
+                    "type": "number"
+                  },
+                  "location": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    }
+                  },
+                  "rotation": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            },
+            "array": {
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "offset": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  }
+                }
+              }
+            },
+            "mirror": {
+              "type": "string",
+              "enum": [
+                "",
+                "x",
+                "y",
+                "z"
+              ]
+            },
+            "color": {
+              "type": "string",
+              "maxLength": 9
+            },
+            "metal": {
+              "type": "number"
+            },
+            "group": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "reference": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  },
+  "instructions": "Turn the request into a Blender recipe (JSON). Millimetres, Z is up, the FRONT faces -Y (the viewer looks from the front).\n1) Furniture with drawers / doors / shelves (cabinet, dresser, nightstand, sideboard, dulap, comoda): answer ONLY {\"name\": \"...\", \"template\": \"cabinet\", \"options\": {\"width\": 500, \"height\": 500, \"depth\": 300, \"drawers\": 2, \"doors\": 2, \"board\": 18, \"color\": \"#c8a27a\", \"handle_color\": \"#333333\"}} — drawers go on top, doors underneath; 0 is allowed. Put in options only what the user said (a size like 500 x 500 x 300 = width x height x depth).\n2) Anything else: {\"name\", \"template\": \"none\", \"parts\": [...]}. Each part: name, shape and location = the CENTRE of the shape [x, y, z]. Shapes: box (size [x,y,z]), cylinder (radius, depth = its height along Z), cone (radius = bottom, radius2 = top, depth), sphere (radius), torus (major = ring radius, minor = tube radius), text (text, font_size, depth). rotation [x,y,z] in degrees (a cylinder lying along X: [0,90,0]).\nOptions per part: bevel (rounded edges in mm, 1-5 looks good), smooth true (smooth shading), subdivide 1-2 (rounder), cut [shapes to subtract, same fields] for holes and pockets, array {count, offset [dx,dy,dz]} for copies in a row, mirror \"x\" (a copy mirrored across the centre line), color \"#rrggbb\", metal 0-1, group (parts with the same group become ONE printed piece), reference true for bought things (screws, hinges).\nSeparate printed pieces touching each other need a 0.3-0.5 mm gap (they are checked for collisions). Walls >= 1.6 mm for printing.\nExample - a phone stand: {\"name\": \"phone stand\", \"template\": \"none\", \"parts\": [{\"name\": \"base\", \"shape\": \"box\", \"size\": [80, 70, 6], \"location\": [0, 0, 3], \"bevel\": 2, \"group\": \"stand\"}, {\"name\": \"back\", \"shape\": \"box\", \"size\": [80, 6, 90], \"location\": [0, 18, 45], \"rotation\": [-15, 0, 0], \"bevel\": 2, \"group\": \"stand\"}, {\"name\": \"lip\", \"shape\": \"box\", \"size\": [80, 8, 12], \"location\": [0, -28, 12], \"bevel\": 2, \"group\": \"stand\", \"cut\": [{\"shape\": \"cylinder\", \"radius\": 6, \"depth\": 20, \"location\": [0, -28, 12], \"rotation\": [90, 0, 0]}]}]} Example - a mug (hollow = a cut, a handle = half a torus: the cut box removes the half inside): {\"name\": \"mug\", \"template\": \"none\", \"parts\": [{\"name\": \"body\", \"shape\": \"cylinder\", \"radius\": 40, \"depth\": 95, \"location\": [0, 0, 47.5], \"bevel\": 2, \"color\": \"#1f3a8a\", \"group\": \"mug\", \"cut\": [{\"shape\": \"cylinder\", \"radius\": 36, \"depth\": 95, \"location\": [0, 0, 51.5]}]}, {\"name\": \"handle\", \"shape\": \"torus\", \"major\": 22, \"minor\": 5, \"location\": [44, 0, 50], \"rotation\": [90, 0, 0], \"color\": \"#1f3a8a\", \"group\": \"mug\", \"cut\": [{\"shape\": \"box\", \"size\": [80, 20, 80], \"location\": [0, 0, 50]}]}]}"
+}

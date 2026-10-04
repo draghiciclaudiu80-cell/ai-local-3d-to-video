@@ -1,0 +1,283 @@
+{
+ "about": "Downloads for AI Local's online installers: official addresses, checked by SHA-256 (git SHA-1 for small files). Written by tools/github (build_manifest).",
+ "items": [
+  {
+   "id": "llama",
+   "title": "llama.cpp b11191 (chat engine, Vulkan)",
+   "group": "core",
+   "os": "win",
+   "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11191/llama-b11191-bin-win-vulkan-x64.zip",
+   "sha256": "0ee4820b0af2b4a588f2605135f58d1450d9e7e1b89b1296110ef2a26ccb9acf",
+   "size": 32467925,
+   "dest": "engines/llama",
+   "kind": "zip"
+  },
+  {
+   "id": "sd",
+   "title": "stable-diffusion.cpp (pictures, Vulkan)",
+   "group": "core",
+   "os": "win",
+   "url": "https://github.com/leejet/stable-diffusion.cpp/releases/download/master-920-2f88688/sd-master-2f88688-bin-win-vulkan-x64.zip",
+   "sha256": "63e84439c20dde75487a933066318ae01353e9e80ee70e031acad48e857e1cb9",
+   "size": 31998883,
+   "dest": "engines/sd",
+   "kind": "zip"
+  },
+  {
+   "id": "tor",
+   "title": "Tor 15.0.23 (private web search)",
+   "group": "core",
+   "os": "win",
+   "url": "https://archive.torproject.org/tor-package-archive/torbrowser/15.0.23/tor-expert-bundle-windows-x86_64-15.0.23.tar.gz",
+   "sha256": "231dad6b9cb401a54c260db7046965ef04e4f72ff071b140d423fb5da281ab1e",
+   "size": 0,
+   "dest": "engines/tor",
+   "kind": "tar",
+   "strip": 1
+  },
+  {
+   "id": "blender",
+   "title": "Blender 5.2 (builds the 3D designs)",
+   "group": "core",
+   "os": "win",
+   "url": "https://download.blender.org/release/Blender5.2/blender-5.2.0-windows-x64.zip",
+   "sha256": "2d184b626c001692c362291911293b6a297179d618d95e9e9192c3a80318adc4",
+   "size": 0,
+   "dest": "engines/blender",
+   "kind": "zip",
+   "strip": "auto"
+  },
+  {
+   "id": "orcaslicer",
+   "title": "OrcaSlicer 2.4.2 (G-code for your 3D printer)",
+   "group": "print",
+   "os": "win",
+   "url": "https://github.com/OrcaSlicer/OrcaSlicer/releases/download/v2.4.2/OrcaSlicer_Windows_V2.4.2_x64_portable.zip",
+   "sha256": "feba3009dfb9d268779cca5758a1a5bc3b7d0722bf8fa48d5c57340de975d6be",
+   "size": 171367668,
+   "dest": "engines/orcaslicer",
+   "kind": "zip",
+   "strip": "auto"
+  },
+  {
+   "id": "freecad",
+   "title": "FreeCAD 1.1.4 (exact CAD parts, STEP files)",
+   "group": "cad",
+   "os": "win",
+   "url": "https://github.com/FreeCAD/FreeCAD/releases/download/1.1.4/FreeCAD_1.1.4-Windows-x86_64-py311.7z",
+   "sha256": "4828741fc91ee37fafcdb97a1abacb18b04ba451ac4372d9ff7a7349b36f4d6d",
+   "size": 418088341,
+   "dest": "engines/freecad",
+   "kind": "7z",
+   "strip": "auto"
+  },
+  {
+   "id": "qwen3-5-4b-q4_k_m-gguf",
+   "title": "Qwen 3.5 4B (the chat model)",
+   "group": "core",
+   "os": "all",
+   "url": "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/e87f176479d0855a907a41277aca2f8ee7a09523/Qwen3.5-4B-Q4_K_M.gguf",
+   "sha256": "00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4",
+   "size": 2740937888,
+   "dest": "models/unsloth__Qwen3.5-4B-GGUF",
+   "kind": "file"
+  },
+  {
+   "id": "mmproj-f16-gguf",
+   "title": "Qwen 3.5 4B: sees pictures",
+   "group": "core",
+   "os": "all",
+   "url": "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/e87f176479d0855a907a41277aca2f8ee7a09523/mmproj-F16.gguf",
+   "sha256": "cd88edcf8d031894960bb0c9c5b9b7e1fea6ebee02b9f7ce925a00d12891f864",
+   "size": 672423616,
+   "dest": "models/unsloth__Qwen3.5-4B-GGUF",
+   "kind": "file"
+  },
+  {
+   "id": "qwen3-1-7b-q4_k_m-gguf",
+   "title": "Qwen3 1.7B (the small helper model)",
+   "group": "core",
+   "os": "all",
+   "url": "https://huggingface.co/unsloth/Qwen3-1.7B-GGUF/resolve/d7f544eead698dbd1f15126ef60b45a1e1933222/Qwen3-1.7B-Q4_K_M.gguf",
+   "sha256": "b139949c5bd74937ad8ed8c8cf3d9ffb1e99c866c823204dc42c0d91fa181897",
+   "size": 1107409472,
+   "dest": "models/small",
+   "kind": "file"
+  },
+  {
+   "id": "embeddinggemma-300m-qat-q8_0-gguf",
+   "title": "EmbeddingGemma (memory)",
+   "group": "core",
+   "os": "all",
+   "url": "https://huggingface.co/ggml-org/embeddinggemma-300m-qat-q8_0-GGUF/resolve/66f974f8cd48cc3b9c41c516b95508e75b4bee64/embeddinggemma-300m-qat-Q8_0.gguf",
+   "sha256": "6fa0c02a9c302be6f977521d399b4de3a46310a4f2621ee0063747881b673f67",
+   "size": 328577056,
+   "dest": "models/memory",
+   "kind": "file"
+  },
+  {
+   "id": "model-bin",
+   "title": "Whisper small (speech to text)",
+   "group": "core",
+   "os": "all",
+   "url": "https://huggingface.co/Systran/faster-whisper-small/resolve/536b0662742c02347bc0e980a01041f333bce120/model.bin",
+   "sha256": "3e305921506d8872816023e4c273e75d2419fb89b24da97b4fe7bce14170d671",
+   "size": 483546902,
+   "dest": "models/whisper-small",
+   "kind": "file"
+  },
+  {
+   "id": "config-json",
+   "title": "Whisper small: config",
+   "group": "core",
+   "os": "all",
+   "url": "https://huggingface.co/Systran/faster-whisper-small/resolve/536b0662742c02347bc0e980a01041f333bce120/config.json",
+   "size": 0,
+   "dest": "models/whisper-small",
+   "kind": "file",
+   "sha1git": "e5047537059bd8f182d9ca64c470201585015187"
+  },
+  {
+   "id": "tokenizer-json",
+   "title": "Whisper small: tokenizer",
+   "group": "core",
+   "os": "all",
+   "url": "https://huggingface.co/Systran/faster-whisper-small/resolve/536b0662742c02347bc0e980a01041f333bce120/tokenizer.json",
+   "size": 0,
+   "dest": "models/whisper-small",
+   "kind": "file",
+   "sha1git": "7818adb6de9fa3064d3ff81226fdd675be1f6344"
+  },
+  {
+   "id": "vocabulary-txt",
+   "title": "Whisper small: vocabulary",
+   "group": "core",
+   "os": "all",
+   "url": "https://huggingface.co/Systran/faster-whisper-small/resolve/536b0662742c02347bc0e980a01041f333bce120/vocabulary.txt",
+   "size": 0,
+   "dest": "models/whisper-small",
+   "kind": "file",
+   "sha1git": "c9074644d9d1205686f16d411564729461324b75"
+  },
+  {
+   "id": "kokoro-v1-0-onnx",
+   "title": "Kokoro (natural voices)",
+   "group": "core",
+   "os": "all",
+   "url": "https://huggingface.co/fastrtc/kokoro-onnx/resolve/8d07950c9b6c87ce6809e9bba7bd494336217c2a/kokoro-v1.0.onnx",
+   "sha256": "7d5df8ecf7d4b1878015a32686053fd0eebe2bc377234608764cc0ef3636a6c5",
+   "size": 325532387,
+   "dest": "models/kokoro",
+   "kind": "file"
+  },
+  {
+   "id": "voices-v1-0-bin",
+   "title": "Kokoro: voices",
+   "group": "core",
+   "os": "all",
+   "url": "https://huggingface.co/fastrtc/kokoro-onnx/resolve/8d07950c9b6c87ce6809e9bba7bd494336217c2a/voices-v1.0.bin",
+   "sha256": "bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d",
+   "size": 28214398,
+   "dest": "models/kokoro",
+   "kind": "file"
+  },
+  {
+   "id": "en_us-lessac-medium-onnx",
+   "title": "Piper voice (fast)",
+   "group": "core",
+   "os": "all",
+   "url": "https://huggingface.co/rhasspy/piper-voices/resolve/c10ece1aade47bb51c153c893d14e5bf8e5b7117/en/en_US/lessac/medium/en_US-lessac-medium.onnx",
+   "sha256": "5efe09e69902187827af646e1a6e9d269dee769f9877d17b16b1b46eeaaf019f",
+   "size": 63201294,
+   "dest": "models/piper",
+   "kind": "file"
+  },
+  {
+   "id": "en_us-lessac-medium-onnx-json",
+   "title": "Piper voice: settings",
+   "group": "core",
+   "os": "all",
+   "url": "https://huggingface.co/rhasspy/piper-voices/resolve/c10ece1aade47bb51c153c893d14e5bf8e5b7117/en/en_US/lessac/medium/en_US-lessac-medium.onnx.json",
+   "size": 0,
+   "dest": "models/piper",
+   "kind": "file",
+   "sha1git": "c67cea2c9a7a6501d89f7b2cdff411bc49e54a28"
+  },
+  {
+   "id": "laya-english",
+   "title": "Laya decision model (English)",
+   "group": "core",
+   "os": "all",
+   "kind": "hf_tree",
+   "repo": "convaiinnovations/laya",
+   "revision": "7b928d828b7b0e022f929d9bd2e44165aa270148",
+   "exclude": [
+    "multilingual/",
+    ".gitattributes",
+    "README.md"
+   ],
+   "dest": "models/laya-real/typed-decisions"
+  },
+  {
+   "id": "laya-multilingual",
+   "title": "Laya decision model (Romanian and other languages)",
+   "group": "core",
+   "os": "all",
+   "kind": "hf_tree",
+   "repo": "convaiinnovations/laya",
+   "revision": "7b928d828b7b0e022f929d9bd2e44165aa270148",
+   "include": [
+    "multilingual/"
+   ],
+   "strip": 1,
+   "dest": "models/laya-real/multilingual"
+  },
+  {
+   "id": "woosh-ae",
+   "title": "Woosh Woosh-AE (sound effects)",
+   "group": "sound",
+   "os": "all",
+   "url": "https://github.com/SonyResearch/Woosh/releases/download/v1.0.0/Woosh-AE.zip",
+   "sha256": "d6f77e3792ee43c21da580f39d6576e0da3e4b46b949223259adf36036c1f9af",
+   "size": 822991075,
+   "dest": "engines/woosh/checkpoints",
+   "kind": "zip",
+   "strip": 0
+  },
+  {
+   "id": "textconditionerv",
+   "title": "Woosh TextConditionerV (sound effects)",
+   "group": "sound",
+   "os": "all",
+   "url": "https://github.com/SonyResearch/Woosh/releases/download/v1.0.0/TextConditionerV.zip",
+   "sha256": "64d8ba0d647d3e685365b37526c2c95790110823623b58fa1642dd8f2139f6ac",
+   "size": 1298488076,
+   "dest": "engines/woosh/checkpoints",
+   "kind": "zip",
+   "strip": 0
+  },
+  {
+   "id": "woosh-dvflow-8s",
+   "title": "Woosh Woosh-DVFlow-8s (sound effects)",
+   "group": "sound",
+   "os": "all",
+   "url": "https://github.com/SonyResearch/Woosh/releases/download/v1.0.0/Woosh-DVFlow-8s.zip",
+   "sha256": "c6f4b60d1cbc88a49ddd1ffa704a251570c0d7dafa8fdd1b4af7d8ba90d61d79",
+   "size": 1564739862,
+   "dest": "engines/woosh/checkpoints",
+   "kind": "zip",
+   "strip": 0
+  },
+  {
+   "id": "synchformer",
+   "title": "Synchformer (sound matched to the video)",
+   "group": "sound",
+   "os": "all",
+   "url": "https://huggingface.co/hkchengrex/MMAudio/resolve/eb13a1a98fdbec91753775c57b074ccdfc60587c/ext_weights/synchformer_state_dict.pth",
+   "sha256": "8aff082f2df5c3bc52759db0c865c7ee772ae6400b860d1b7e90413f2defb67c",
+   "size": 950058171,
+   "dest": "engines/woosh/checkpoints",
+   "kind": "file"
+  }
+ ]
+}

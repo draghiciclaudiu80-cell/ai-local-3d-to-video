@@ -1,0 +1,21 @@
+{
+  "id": "materials",
+  "name": "Materials (FreeCAD data)",
+  "kind": "calculator",
+  "about": "138 real materials from FreeCAD's open material library (CC-BY): density, strength, stiffness, heat — plus CNC cutting speeds for 13 machining materials, turned into starting RPM and feed for your end mill.",
+  "description": "Looks up real material properties (density, yield / tensile strength, Young's modulus, thermal data) for metals, plastics (PLA, ABS, PET, acrylic...), woods, glass; and CNC starting values (spindle RPM, feed, chip load) for a tool diameter. Use it for 'how strong / heavy is ...', material choice, and CNC feeds and speeds.",
+  "triggers": ["material properties", "feeds and speeds", "feed and speed", "spindle speed", "chip load", "chipload", "cutting speed", "yield strength", "tensile strength"],
+  "run": ["{python}", "{plugin}/lookup.py", "{input}", "{outdir}"],
+  "timeout": 30,
+  "parameters": {
+    "type": "object",
+    "required": ["query"],
+    "properties": {
+      "query": {"type": "string", "maxLength": 80},
+      "tool_diameter": {"type": "number"},
+      "flutes": {"type": "integer"},
+      "max_rpm": {"type": "number"}
+    }
+  },
+  "instructions": "Fill in: query = the material in plain words (e.g. \"aluminum 6061\", \"PLA\", \"MDF\", \"stainless steel\", \"oak hard wood\"). For CNC milling / routing also give tool_diameter (mm), flutes (2 if not said) and max_rpm of the machine if the user said it (24000 for a router, 12000 for many hobby spindles). Answer with the JSON only."
+}

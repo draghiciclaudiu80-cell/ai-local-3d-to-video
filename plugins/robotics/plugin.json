@@ -1,0 +1,34 @@
+{
+  "id": "robotics",
+  "name": "Robot arm (Robotics Toolbox)",
+  "kind": "calculator",
+  "about": "Peter Corke's Robotics Toolbox for Python (MIT), offline: for a hobby arm from its link lengths or a known robot (UR3/5/10, Panda, Puma560, KR5, IRB140, AL5D, Orion5, Jaco…) — how far it reaches, the joint / servo angles to reach a point, where the tool is for given angles, the torque each joint needs with the servo or stepper to use, and a move animation.",
+  "description": "Robot arm kinematics and statics: reach / workspace picture, inverse kinematics (joint and servo angles to reach a point), forward kinematics, joint torques + servo / stepper choice, move animation (GIF). For a hobby arm (link lengths, payload) or a known robot model (UR5, Panda, Puma560, AL5D…).",
+  "triggers": ["robot arm", "robotic arm", "arm reach", "joint angles", "inverse kinematics", "forward kinematics", "workspace of", "servo angles", "brat robotic", "ur5", "ur3", "ur10", "puma560", "franka", "al5d", "orion5"],
+  "keywords": ["arm", "robot", "joint", "joints", "reach", "kinematics", "servo", "servos", "angles", "gripper", "shoulder", "elbow", "wrist", "payload", "workspace", "animate", "animation"],
+  "requires": ["{engines}/robotics/venv/Scripts/python.exe", "{engines}/robotics/venv/bin/python"],
+  "run": ["{python}", "{plugin}/run.py", "{input}", "{outdir}"],
+  "timeout": 160,
+  "parameters": {
+    "type": "object",
+    "required": ["task"],
+    "properties": {
+      "task": {"type": "string", "enum": ["check", "reach", "ik", "fk", "torque", "move"]},
+      "robot": {"type": "string", "maxLength": 30},
+      "links": {"type": "array", "maxItems": 6, "items": {"type": "string", "maxLength": 20}},
+      "base_height": {"type": "string", "maxLength": 20},
+      "link_masses": {"type": "array", "maxItems": 6, "items": {"type": "string", "maxLength": 20}},
+      "joint_masses": {"type": "array", "maxItems": 6, "items": {"type": "string", "maxLength": 20}},
+      "payload": {"type": "string", "maxLength": 20},
+      "range": {"type": "string", "maxLength": 20},
+      "base_rotation": {"type": "string", "enum": ["yes", "no"]},
+      "target": {"type": "string", "maxLength": 80},
+      "angles": {"type": "array", "maxItems": 7, "items": {"type": "number"}},
+      "from_angles": {"type": "array", "maxItems": 7, "items": {"type": "number"}},
+      "to_angles": {"type": "array", "maxItems": 7, "items": {"type": "number"}},
+      "duration": {"type": "string", "maxLength": 20},
+      "safety_factor": {"type": "string", "maxLength": 10}
+    }
+  },
+  "instructions": "Turn the request into a robot-arm calculation. task: check = torques + servos (and the point if given); reach = how far / where it can reach (picture); ik = the joint / servo angles to reach a point; fk = where the tool is for given joint angles; torque = torque per joint + which servo or stepper; move = an animation from one pose to another. robot = a known model name (UR5, UR3, UR10, Panda, Puma560, KR5, IRB140, AL5D, Orion5, Jaco, Mico, Cobra600) — or leave it out for the user's own arm and give links = the link lengths from the shoulder outwards (\"200 mm\", \"150 mm\"), base_height = turntable to shoulder, payload (\"300 g\"), link_masses / joint_masses (servo weights) if said, range = servo range (\"180 deg\" / \"270 deg\"), base_rotation no for an arm without a turntable. target = the point as text (\"250 mm forward, 100 mm up\" or \"250, 0, 100 mm\"). angles / from_angles / to_angles in degrees (0 = the middle of each servo). Example: {\"task\": \"ik\", \"links\": [\"200 mm\", \"150 mm\"], \"base_height\": \"80 mm\", \"target\": \"250 mm forward, 100 mm up\"}. Answer with the JSON only."
+}

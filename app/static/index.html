@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Local AI</title>
+<link rel="icon" href="/static/icon.png">
+<link rel="stylesheet" href="/static/app.css">
+<script>try { const t = localStorage.getItem("theme"); if (t && t !== "system") document.documentElement.dataset.theme = t; } catch {}</script>
+</head>
+<body>
+<aside>
+  <div class="brand"><div class="logo">AI</div><span>Local AI</span></div>
+  <nav id="nav">
+    <button data-p="chat"><svg class="i"><use href="#i-chat"/></svg><span>Chat</span></button>
+    <button data-p="create"><svg class="i"><use href="#i-spark"/></svg><span>Create</span></button>
+    <button data-p="gallery"><svg class="i"><use href="#i-image"/></svg><span>Gallery</span></button>
+    <button data-p="computer"><svg class="i"><use href="#i-cursor"/></svg><span>Computer use</span></button>
+    <button data-p="memory"><svg class="i"><use href="#i-brain"/></svg><span>Memory</span></button>
+    <button data-p="models"><svg class="i"><use href="#i-download"/></svg><span>Models</span></button>
+  </nav>
+  <div class="side-foot">
+    <button id="stopAll" class="stopall" title="Stops every picture, video, merge and movie being made"><svg class="i"><use href="#i-stop"/></svg><span id="stopAllText">Nothing is being made</span></button>
+    <button id="layaBtn" class="layabtn" title="Laya (the real one: a 421M decision model by Convai Innovations, open source) helps the main model on every message: in a fraction of a second it decides whether the message needs fresh facts from the web (through Tor) or a deeper look into your memory, and hands them over before the answer."><svg class="i"><use href="#i-spark"/></svg><span id="layaText">Laya helper: off</span></button>
+    <button id="layaOnly" class="layabtn" title="Chat with the small model (Qwen3 1.7B) instead of the main model: the main model is switched off. Lighter and faster, but simpler answers. Searches, pictures and videos still work when you ask directly. (Laya itself only decides — it never writes answers.)"><svg class="i"><use href="#i-chat"/></svg><span id="layaOnlyText">Laya only: off</span></button>
+    <div class="status" id="llmStatus"><span class="dot" id="llmDot"></span><span id="llmText">Model idle</span></div>
+    <button id="themeBtn"><svg class="i"><use href="#i-sun"/></svg><span id="themeText">Theme: System</span></button>
+    <button data-p="settings" id="settingsBtn"><svg class="i"><use href="#i-gear"/></svg><span>Settings</span></button>
+  </div>
+</aside>
+
+<main>
+  <!-- CHAT -->
+  <section class="page" id="p-chat">
+    <div class="chat-wrap">
+      <div class="convs">
+        <button class="btn" id="newChat"><svg class="i"><use href="#i-plus"/></svg>New chat</button>
+        <input id="convSearch" placeholder="Search conversations…" aria-label="Search conversations">
+        <div class="list" id="convList"></div>
+        <button class="btn sm danger" id="clearChats" hidden><svg class="i"><use href="#i-trash"/></svg>Delete all chats</button>
+      </div>
+      <div class="chat-main">
+        <div id="log"></div>
+        <div class="composer">
+          <div class="talking" id="talking" hidden><span class="wave"><i></i><i></i><i></i><i></i></span>Speaking…
+            <button class="btn sm" id="stopTalk" title="Stop talking (Esc)"><svg class="i"><use href="#i-stop"/></svg>Stop talking</button>
+            <span class="muted small" id="talkTip">or press Esc</span></div>
+          <div class="notice" id="chatHint" hidden></div>
+          <div class="thumbs" id="thumbs"></div>
+          <div class="skillmenu" id="skillMenu" hidden></div>
+          <textarea id="input" rows="1" placeholder="Message Local AI…  (“remember …” saves a fact · / for skills and commands)" aria-label="Message"></textarea>
+          <div class="tools-row">
+            <button class="round" id="attach" title="Add files, photos, videos or a folder"><svg class="i"><use href="#i-plus"/></svg></button>
+            <input type="file" id="attachFile" multiple hidden>
+            <input type="file" id="attachDir" webkitdirectory multiple hidden>
+            <button class="chip" id="toolsChip" title="Let the chat create images/videos/movies, search the web and use the PC"><svg class="i"><use href="#i-tool"/></svg>Tools</button>
+            <button class="chip" id="thinkChip" title="Let the model think before answering (slower, smarter)"><svg class="i"><use href="#i-brain"/></svg>Thinking</button>
+            <select id="voiceMode" class="chip" title="Voice mode" aria-label="Voice mode" style="min-height:0">
+              <option value="off">Voice: off</option>
+              <option value="manual">Voice: tap to talk</option>
+              <option value="auto">Voice: auto-send</option>
+              <option value="hands">Voice: hands-free</option>
+            </select>
+            <button class="chip" id="skillsChip" title="Skills, plugins, commands and your rules — or type / in the message box"><svg class="i"><use href="#i-spark"/></svg>Skills</button>
+            <button class="chip" id="plugChip" title="Plugins: tools the AI can use (PicoGK 3D…) — switch them on/off or add your own"><svg class="i"><use href="#i-plug"/></svg>Plugins</button>
+            <button class="chip" id="pyChip" title="Python code: for 3D requests the AI writes its own Blender Python, runs it, reads the errors, fixes them and looks at the picture — like a programmer. Off: it uses ready designs and recipes. The code is safety-checked first (no files, system or internet)."><svg class="i"><use href="#i-code"/></svg>Python code</button>
+            <span class="grow"></span>
+            <span class="muted small mono" id="chatModel"></span>
+            <button class="round" id="mic" title="Speak (speech to text)"><svg class="i"><use href="#i-mic"/></svg></button>
+            <button class="round primary" id="send" title="Send"><svg class="i"><use href="#i-up"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CREATE -->
+  <section class="page" id="p-create">
+    <div class="page-head"><h1>Create</h1><span class="sub">Images, video clips and whole movies — made on this PC.</span></div>
+    <div class="tabs" id="createTabs"><button data-t="image">Image</button><button data-t="video">Video</button><button data-t="movie">Movie</button><button data-t="model">3D</button></div>
+    <div class="page-body">
+      <div class="split">
+        <div class="card" id="c-image">
+          <label class="f">Describe the picture<textarea id="imgPrompt" rows="3" placeholder="A lighthouse on a cliff at sunset"></textarea></label>
+          <div class="refs" data-refs="image"></div>
+          <div class="f mono small muted">Style</div>
+          <div class="chips" id="styleChips"></div>
+          <div class="row">
+            <label class="f">Size<select id="imgSize"><option value="0x0">Model default</option><option>512x512</option><option>768x768</option><option>1024x1024</option><option>1024x576</option><option>576x1024</option></select></label>
+            <label class="f">Seed<input id="imgSeed" type="number" value="-1" style="width:110px"></label>
+            <span class="grow"></span>
+            <button class="btn primary" id="imgGo"><svg class="i"><use href="#i-spark"/></svg>Generate</button>
+          </div>
+          <div class="muted small" id="imgModel"></div>
+        </div>
+        <div class="card" id="c-video" hidden>
+          <label class="f">Describe the clip<textarea id="vidPrompt" rows="3" placeholder="Waves crashing on a beach at sunset"></textarea></label>
+          <div class="refs" data-refs="video"></div>
+          <div class="row">
+            <label class="f">Length<select id="vidSecs"><option value="1">1 second</option><option value="2" selected>2 seconds</option><option value="3">3 seconds</option><option value="5">5 seconds</option></select></label>
+            <label class="f">Size<select id="vidSize"><option>480x272</option><option>416x240</option><option>640x368</option><option>832x480</option></select></label>
+            <span class="grow"></span>
+            <button class="btn primary" id="vidGo"><svg class="i"><use href="#i-spark"/></svg>Generate</button>
+          </div>
+          <div class="muted small" id="vidModel"></div>
+        </div>
+        <div class="card" id="c-movie" hidden>
+          <label class="f">Title<input id="mvTitle" value="My movie"></label>
+          <label class="f">Look of the characters &amp; style (added to every scene so they stay the same)<textarea id="mvLook" rows="2" placeholder="A red-haired woman in a green coat, cinematic, warm film look"></textarea></label>
+          <div class="refs" data-refs="movie"></div>
+          <label class="f">Scenes — one per line. Add narration after a |<textarea id="mvScenes" rows="6" placeholder="walks into a rainy street at night | It was her last night in the city.&#10;looks up at a neon sign&#10;smiles and opens a cafe door | And then she saw him."></textarea></label>
+          <div class="row">
+            <label class="f">Each scene<select id="mvSecs"><option value="1">1 s</option><option value="2" selected>2 s</option><option value="3">3 s</option><option value="5">5 s</option></select></label>
+            <label class="f">Voice<select id="mvVoice"></select></label>
+            <label class="f">Music<select id="mvMusic"></select></label>
+            <label class="f">Add music<input type="file" id="musicFile" accept=".mp3,.wav,.ogg,.m4a,.flac" style="max-width:190px"></label>
+          </div>
+          <div class="row"><span class="muted small grow">Tip: or just ask the chat — “make a 30-second movie about…” — it plans the scenes for you.</span><button class="btn primary" id="mvGo"><svg class="i"><use href="#i-film"/></svg>Make movie</button></div>
+        </div>
+        <div class="card wide" id="c-model" hidden>
+          <div class="d3">
+            <div class="d3edit">
+              <label class="f">Describe the part<textarea id="d3Ask" rows="2" placeholder="A 60 mm cube filled with a lattice, 10 mm cells — or: make it taller, add a hole"></textarea></label>
+              <div class="row">
+                <label class="f">Designer<select id="d3Agent"><option value="small">Small model (Qwen 1.7B, fast)</option><option value="chat">Chat model (slower, smarter)</option></select></label>
+                <label class="f">It is<select id="d3Base"><option value="new">a new design</option><option value="change">a change to this design</option></select></label>
+                <span class="grow"></span>
+                <button class="btn" id="d3Design"><svg class="i"><use href="#i-spark"/></svg>Design it</button>
+              </div>
+              <div class="row">
+                <label class="f" title="PicoGK: organic shapes, lattices, round printed threads. FreeCAD: exact CAD — screw holes, ISO threads, STEP files.">Engine<select id="d3Engine"><option value="picogk">PicoGK (shapes, lattices)</option><option value="freecad">FreeCAD (exact CAD, STEP)</option></select></label>
+                <label class="f grow">Or start from a working design<select id="d3Tpl"><option value="">—</option></select></label>
+              </div>
+              <div class="row">
+                <label class="f grow">Part of the device<select id="d3Body"></select></label>
+                <button class="btn sm" id="d3AddBody">+ Part</button><button class="btn sm ghost" id="d3DelBody">Remove</button>
+                <label class="row small" style="align-items:center"><input type="checkbox" id="d3Ref" style="min-height:0"> bought</label>
+              </div>
+              <div class="row">
+                <label class="f grow">Part name<input id="d3Name" value="part"></label>
+                <label class="f" id="d3HollowL">Hollow (wall, mm)<input id="d3Hollow" type="number" min="0" step="0.5" value="0" style="width:95px"></label>
+                <label class="f" id="d3SmoothL">Smooth (mm)<input id="d3Smooth" type="number" min="0" step="0.5" value="0" style="width:95px"></label>
+                <label class="f" id="d3ChamferL" hidden>Chamfer (mm)<input id="d3Chamfer" type="number" min="0" step="0.5" value="0" style="width:95px"></label>
+              </div>
+              <div class="f mono small muted" id="d3PartsHint">Parts, in order — add joins, subtract cuts away, intersect keeps only the overlap. Millimetres, Z is up.</div>
+              <div class="d3parts" id="d3Parts"></div>
+              <div class="row"><button class="btn sm" id="d3AddPart">+ Add part</button><span class="grow"></span>
+                <button class="btn primary" id="d3Build"><svg class="i"><use href="#i-spark"/></svg>Build with PicoGK</button></div>
+              <div class="muted small" id="d3Status">Describe a part and press Design it — or set the parts yourself. The blueprint on the right follows every change.</div>
+            </div>
+            <div class="d3view">
+              <div class="row"><div class="seg" id="d3Mode"><button data-t="blue" class="on">Blueprint</button><button data-t="built">Built</button></div>
+                <button class="btn sm exbtn" id="d3Explode" hidden title="Pull the parts of the device apart / put them back together">Explode</button>
+                <span class="grow"></span><button class="btn sm" id="d3Print" title="G-code for your 3D printer — sliced on this PC, no internet (builds it first if needed)">🖨 Print</button><button class="btn sm primary" id="d3Send" hidden title="Put this model back into the chat it came from (the AI can change it further)">Send to chat</button>
+                <a class="btn sm" id="d3Step" hidden title="The exact CAD file (FreeCAD, Fusion, CNC software)">STEP</a><a class="btn sm" id="d3Download" hidden>Download STL</a></div>
+              <div class="d3tools" id="d3Tools">
+                <div class="seg">
+                  <button data-tool="select" class="on" title="Select and move (V)">↖ Move</button><button data-tool="stretch" title="Stretch / resize a part (S)">⇔ Stretch</button><button data-tool="rotate" title="Turn a part: drag one of its rings (R)">⟳ Rotate</button><button data-tool="hole" title="Add a hole: click a surface, or draw the circle (H)">◎ Hole</button><button data-tool="dent" title="Add a dent (D)">◡ Dent</button><button data-tool="thread" title="Thread a cylinder or a hole (T)">⚙ Thread</button>
+                </div>
+                <button class="btn sm ghost" data-act="copy" title="Copy the selected part / hole (Ctrl+C)">Copy</button><button class="btn sm ghost" data-act="paste" title="Paste a copy next to it (Ctrl+V)">Paste</button><button class="btn sm ghost" data-act="del" title="Delete the selected part / hole (Del)">Delete</button><button class="btn sm ghost" id="d3Mirror" data-act="mirror" title="Mirror the selected part — or the whole design when nothing is selected (a left hand from a right hand)">⇋ Mirror</button><button class="btn sm" id="d3Undo" data-act="undo" title="Undo the last change (Ctrl+Z)" disabled>↶ Undo</button><button class="btn sm" id="d3Redo" data-act="redo" title="Redo (Ctrl+Y)" disabled>↷ Redo</button><button class="btn sm ghost" data-act="frame" title="Look at the selected part (F)">⌖</button>
+                <label class="small d3snap" title="Moves and sizes go in steps of this (hold Shift while dragging: 0.1 mm)">Snap<select id="d3Snap"><option>0.1</option><option>0.5</option><option selected>1</option><option>5</option><option>10</option></select>mm</label>
+              </div>
+              <div class="m3view d3canvas" id="d3Canvas"></div>
+              <div class="muted small" id="d3Hint"></div>
+              <div class="row small d3printer"><span class="muted">Printer:</span><span id="d3Printer"></span><button class="btn sm ghost" id="d3CutFit" title="Split the design into pieces that fit your printer's plate (with holes for alignment pins)" hidden>✂ Cut to fit</button></div>
+              <div class="small" id="d3Fit"></div>
+              <div class="m3panel" id="d3Panel"></div>
+              <div class="muted small">Each part of the device has its own colour · red = cut away / holes · yellow = selected · grey = bought parts.
+                Mouse: drag turns · right-drag moves the view · wheel zooms · double-click resets · arrow keys nudge the selection · F looks at it.</div>
+            </div>
+          </div>
+        </div>
+        <div class="card" id="c-queue"><div class="qhead"><h3>Queue</h3><button class="btn sm danger" id="qStopAll"><svg class="i"><use href="#i-stop"/></svg>Stop everything</button></div><div class="queue" id="queue"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GALLERY -->
+  <section class="page" id="p-gallery">
+    <div class="page-head"><h1>Gallery</h1><span class="sub" id="galHint"></span></div>
+    <div class="tabs" id="galTabs"><button data-t="movie">Movies</button><button data-t="clip">Clips</button><button data-t="image">Images</button><button data-t="model">3D</button></div>
+    <div class="page-body">
+      <div class="row"><span class="grow"></span>
+        <button class="btn danger" id="galClear" hidden><svg class="i"><use href="#i-trash"/></svg>Delete all</button></div>
+      <div class="grid" id="galGrid"></div>
+    </div>
+  </section>
+
+  <!-- COMPUTER USE -->
+  <section class="page" id="p-computer">
+    <div class="page-head"><h1>Computer use</h1><span class="sub">A vision model looks at your screen and proposes one step at a time. Nothing happens until you approve. This window hides while it looks and acts, then comes back for your OK.</span></div>
+    <div class="page-body">
+      <div class="card">
+        <div class="row"><label class="f grow">What should it do?<input id="cuTask" placeholder="Open Notepad and write a shopping list: milk, eggs, bread"></label><button class="btn primary" id="cuGo"><svg class="i"><use href="#i-play"/></svg>Start</button></div>
+        <span class="muted small">Emergency stop: slam the mouse into any corner of the screen. Model: <b class="mono" id="cuModel">—</b></span>
+      </div>
+      <div class="cu" id="cuLive" hidden>
+        <div class="card"><div class="row"><h3 class="grow" id="cuStatus">Working</h3><button class="btn danger sm" id="cuStop"><svg class="i"><use href="#i-stop"/></svg>Stop</button></div>
+          <div class="shot"><img id="cuShot" alt="Latest screenshot" onerror="this.hidden=true" onload="this.hidden=false"><div class="mark" id="cuMark" hidden></div></div></div>
+        <div class="card"><div id="cuProposal"></div><h3>Steps</h3><div class="steps" id="cuSteps"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MEMORY -->
+  <section class="page" id="p-memory">
+    <div class="page-head"><h1>Memory</h1><span class="sub">What the assistant knows about you, and documents it can read. Stored only on this PC.</span></div>
+    <div class="page-body">
+      <div class="card"><h3>Profile</h3><span class="muted small">A short “who you are”, built from the facts below. The assistant reads it in every chat.</span>
+        <div id="persona" class="persona"></div>
+        <div class="row"><label class="row grow" style="align-items:center"><input type="checkbox" id="memAuto" style="min-height:0"> Learn facts from my chats automatically</label>
+          <button class="btn sm" id="personaRebuild">Rebuild profile</button></div>
+        <div class="muted small mono" id="memStats"></div></div>
+      <div class="card"><h3>What it remembers</h3>
+        <div class="row"><input id="factIn" class="grow" placeholder="Something to remember, e.g. my printer is 256 x 256 x 256 mm"><button class="btn primary" id="factAdd">Remember</button></div>
+        <details class="mgroup" open><summary>📌 Rules — always followed <span class="muted small" id="nRules"></span></summary><div class="mlist" id="rulesList"></div></details>
+        <details class="mgroup" open><summary>👤 About you <span class="muted small" id="nFacts"></span></summary><div class="mlist" id="facts"></div></details>
+        <details class="mgroup"><summary>💡 Lessons — learned from its own mistakes <span class="muted small" id="nLessons"></span></summary><div class="mlist" id="lessonList"></div></details>
+        <details class="mgroup"><summary>👍👎 Rated answers — good and bad examples <span class="muted small" id="nRated"></span></summary><div class="mlist" id="ratedList"></div></details></div>
+      <div class="card"><h3>Documents</h3><span class="muted small">PDF, Word, text: the chat quotes them when they're relevant.</span>
+        <div class="row"><input type="file" id="docFile" class="grow" multiple accept=".pdf,.docx,.txt,.md,.csv,.json"><button class="btn primary" id="docUp">Add</button></div>
+        <div class="mlist" id="docs"></div></div>
+      <div class="card"><h3>Sandbox — downloaded files</h3><span class="muted small">Downloads land here (through Tor) and nowhere else: safe file types only, never opened or run by the app. Type <span class="mono">download https://…</span> in the chat, or paste an address here.</span>
+        <div class="row"><input id="sbUrl" class="grow" placeholder="https://… a file to download into the sandbox"><button class="btn" id="sbGet">Download</button><button class="btn" id="sbOpen">Open folder</button></div>
+        <div class="mlist" id="sbList"></div></div>
+      <div class="muted small" style="padding:0 4px">Skills and plugins are in the chat: the <b>Skills</b> and <b>Plugins</b> buttons under the message box (tick = on, add your own folder there).</div>
+    </div>
+  </section>
+
+  <!-- MODELS -->
+  <section class="page" id="p-models">
+    <div class="page-head"><h1>Models</h1><span class="sub mono" id="hwLine"></span></div>
+    <div class="tabs" id="modelTabs">
+      <button data-t="text">Text</button><button data-t="vision">Computer use</button><button data-t="image">Image</button>
+      <button data-t="video">Video</button><button data-t="voice">Voice</button><button data-t="transcription">Transcription</button>
+    </div>
+    <div class="page-body">
+      <div class="muted small" id="modelHint"></div>
+      <div id="dlPanel"></div>
+      <div class="row" id="searchRow">
+        <input id="hfQuery" class="grow" placeholder="Search Hugging Face — start typing, e.g. qwen, llama, gemma…" autocomplete="off">
+        <div class="chips" id="sizeChips"></div>
+      </div>
+      <div id="hfResults"></div>
+      <div id="modelPane"></div>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="page" id="p-settings">
+    <div class="page-head"><h1>Settings</h1><span class="sub" id="version"></span></div>
+    <div class="page-body">
+      <div class="card" id="setupCard"><h3>This PC — setup check</h3>
+        <div class="notice" id="setupBanner" hidden></div>
+        <div class="muted small">What Local AI needs on this PC, and what's missing. Copy the whole folder to another PC (models included), double-click <b>Local AI.exe</b> in it — the app fixes its own paths and opens this check once.</div>
+        <div id="setupList" class="setuplist"></div>
+        <div class="row"><span class="muted small grow" id="setupSum"></span><button class="btn" id="setupRecheck">Check again</button></div></div>
+      <div class="card"><h3>Assistant</h3>
+        <label class="f">Personality / instructions<textarea id="sysPrompt" rows="3"></textarea></label>
+        <div class="row">
+          <label class="f">Memory length (tokens)<select id="ctx"><option>4096</option><option>8192</option><option>16384</option><option>32768</option></select></label>
+          <label class="f">Creativity<input id="temp" type="number" step="0.1" min="0" max="2" style="width:100px"></label>
+          <span class="grow"></span><button class="btn primary" id="saveAssistant">Save</button>
+        </div></div>
+      <div class="card"><h3>Laya — fast decisions (the real Laya)</h3>
+        <label class="row" style="align-items:center"><input type="checkbox" id="laya" style="min-height:0"> Let Laya make the quick decisions (recommended)</label>
+        <div class="muted small">Laya (Convai Innovations, open source, Apache 2.0) is a 421M decision model — System 1. It never writes text:
+          it reads your message and decides what you want (a picture, a 3D model, a search, just talking…) in a fraction of a second on the
+          processor, with how sure it is. Sure → it acts. Not sure → the main model decides, or you get buttons to choose — and every
+          button you click teaches it how <i>you</i> say things. English uses the fine-tuned decision model, Romanian and other languages
+          the multilingual one. It uses ~1–2 GB of RAM while it works and stops after 10 idle minutes.</div>
+        <div class="row"><span class="grow"></span><button class="btn" id="saveLaya">Save</button></div></div>
+      <div class="card"><h3>Security</h3><div class="muted small">The rule: the AI may <b>read</b> untrusted information (web pages, files, tool results), but untrusted information can <b>never give it authority</b>. The AI only proposes — this app decides, and you approve anything risky.</div>
+        <div id="secPolicy"></div>
+        <div class="row"><span class="muted small grow" id="secSum"></span><button class="btn" id="secTest">Run attack tests</button></div>
+        <div id="secTests"></div>
+        <details><summary class="muted small">Security log (latest events)</summary><div id="secLog" class="small mono"></div></details></div>
+      <div class="card"><h3>Internet</h3>
+        <label class="row" style="align-items:center"><input type="checkbox" id="allowWeb" style="min-height:0"> Let the chat search and read the web without asking each time</label>
+        <label class="row" style="align-items:center"><input type="checkbox" id="torOn" style="min-height:0"> Search through Tor (private) <span class="muted small" id="torState"></span></label>
+        <div class="muted small">Searches, pages, pictures and videos go through the Tor network: websites don't see your address,
+          each search takes a new route, and if Tor isn't connected nothing is sent. The app's window itself never goes online.</div>
+        <div class="row"><label class="f grow">Proxy (optional — e.g. socks5://127.0.0.1:9150 to go through Tor Browser)<input id="proxy" placeholder="none"></label><button class="btn" id="saveWeb">Save</button></div></div>
+      <div class="card"><h3>Model folders</h3><span class="muted small">Model files in these folders are found automatically (e.g. models from LM Studio). Only files in the app's own folder can be deleted here.</span>
+        <div class="queue" id="folders"></div>
+        <div class="row"><input id="folderIn" class="grow" placeholder="C:\path\to\models"><button class="btn" id="folderAdd">Add folder</button></div></div>
+      <div class="card"><h3>Storage</h3><div id="disk"></div>
+        <div class="sect">Files in the app's models folder</div><div class="queue" id="modelFiles"></div>
+        <div class="row"><button class="btn" data-open="models">Open models folder</button><button class="btn" data-open="media">Open gallery folder</button><button class="btn" data-open="data">Open data folder</button>
+          <button class="btn" id="unload">Free memory (unload chat model)</button></div></div>
+      <div class="card"><h3>From Local AI 0.1</h3><div class="row"><span class="muted small grow">Copy your old chats, memory and gallery into this version.</span><button class="btn" id="importOld">Import</button></div></div>
+    </div>
+  </section>
+
+  <div id="dock" hidden aria-live="polite">
+    <div class="top"><span class="what" id="dockWhat"></span><button class="btn danger sm" id="dockCancel">Cancel</button></div>
+    <div class="bar"><i id="dockBar" style="width:0%"></i></div>
+    <div class="nums"><span id="dockPhase"></span><span id="dockNums"></span></div>
+  </div>
+</main>
+<div id="lightbox" hidden><img alt=""></div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2z"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></symbol>
+  <symbol id="i-cursor" viewBox="0 0 24 24"><path d="M4 4l7 17 2.5-7.5L21 11z"/></symbol>
+  <symbol id="i-brain" viewBox="0 0 24 24"><path d="M9 3a3 3 0 0 0-3 3v1a3 3 0 0 0-2 5 3 3 0 0 0 2 5v1a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM15 3a3 3 0 0 1 3 3v1a3 3 0 0 1 2 5 3 3 0 0 1-2 5v1a3 3 0 0 1-6 0"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 2v5M15 2v5M6 7h12v4a6 6 0 0 1-12 0zM12 17v5"/></symbol>
+  <symbol id="i-code" viewBox="0 0 24 24"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/></symbol>
+  <symbol id="i-tool" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10a7 7 0 0 1-14 0M12 19v3"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></symbol>
+  <symbol id="i-film" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M7 3v18M17 3v18M2 8h5M2 16h5M17 8h5M17 16h5"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></symbol>
+  <symbol id="i-speak" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></symbol>
+  <symbol id="i-redo" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/></symbol>
+  <symbol id="i-like" viewBox="0 0 24 24"><path d="M7 11v10H4a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1h3zm0 0 4-8a2.5 2.5 0 0 1 3 2.5V9h5a2 2 0 0 1 2 2.3l-1.3 7.7a2.5 2.5 0 0 1-2.5 2H7"/></symbol>
+  <symbol id="i-dislike" viewBox="0 0 24 24"><path d="M17 13V3h3a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-3zm0 0-4 8a2.5 2.5 0 0 1-3-2.5V15H5a2 2 0 0 1-2-2.3l1.3-7.7A2.5 2.5 0 0 1 6.8 3H17"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></symbol>
+  <symbol id="i-save" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></symbol>
+  <symbol id="i-print" viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4v-7h16v7h-2M7 14h10v7H7z"/></symbol>
+</svg>
+<script type="module" src="/static/main.js"></script>
+</body>
+</html>

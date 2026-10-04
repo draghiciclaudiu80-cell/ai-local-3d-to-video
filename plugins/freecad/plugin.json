@@ -1,0 +1,351 @@
+{
+  "id": "freecad",
+  "name": "FreeCAD (precise CAD)",
+  "description": "Precise mechanical parts with FreeCAD's CAD kernel: exact holes for metal screws (clearance, self-tapping, heat-set inserts, nut traps, counterbores, countersinks — sizes from a table that prints well), slots, fillets, chamfers, hollow boxes; exact fit check between parts; STEP files for CNC / other CAD + STL for the printer.",
+  "about": "Uses the FreeCAD installed on this PC (headless, its settings / macros / add-ons kept out). The AI only writes a recipe (data) — a fixed script builds it.",
+  "triggers": [
+    "freecad",
+    "step file",
+    "step files"
+  ],
+  "run": [
+    "{python}",
+    "{plugin}/run.py",
+    "{input}",
+    "{outdir}"
+  ],
+  "requires": [
+    "%LOCALAPPDATA%/Programs/FreeCAD */bin/freecadcmd.exe",
+    "%ProgramFiles%/FreeCAD */bin/freecadcmd.exe",
+    "{engines}/freecad/bin/freecadcmd.exe",
+    "{engines}/freecad/AppRun",
+    "/usr/bin/freecadcmd",
+    "/usr/local/bin/freecadcmd",
+    "/usr/bin/FreeCADCmd"
+  ],
+  "timeout": 180,
+  "parameters": {
+    "type": "object",
+    "required": [
+      "name"
+    ],
+    "properties": {
+      "name": {
+        "type": "string"
+      },
+      "bodies": {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 12,
+        "items": {
+          "type": "object",
+          "required": [
+            "name",
+            "parts"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "color": {
+              "type": "string"
+            },
+            "reference": {
+              "type": "boolean"
+            },
+            "parts": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 30,
+              "items": {
+                "type": "object",
+                "required": [
+                  "shape"
+                ],
+                "properties": {
+                  "shape": {
+                    "type": "string",
+                    "enum": [
+                      "box",
+                      "cylinder",
+                      "tube",
+                      "cone",
+                      "sphere",
+                      "slot",
+                      "polygon"
+                    ]
+                  },
+                  "op": {
+                    "type": "string",
+                    "enum": [
+                      "add",
+                      "cut",
+                      "intersect"
+                    ]
+                  },
+                  "center": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 3,
+                    "maxItems": 3
+                  },
+                  "size": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 3,
+                    "maxItems": 3
+                  },
+                  "radius": {
+                    "type": "number"
+                  },
+                  "radius2": {
+                    "type": "number"
+                  },
+                  "height": {
+                    "type": "number"
+                  },
+                  "wall": {
+                    "type": "number"
+                  },
+                  "length": {
+                    "type": "number"
+                  },
+                  "width": {
+                    "type": "number"
+                  },
+                  "axis": {
+                    "type": "string",
+                    "enum": [
+                      "x",
+                      "y",
+                      "z"
+                    ]
+                  },
+                  "direction": {
+                    "type": "string",
+                    "enum": [
+                      "x",
+                      "y",
+                      "z"
+                    ]
+                  },
+                  "rotate": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 3,
+                    "maxItems": 3
+                  },
+                  "points": {
+                    "type": "array",
+                    "maxItems": 60,
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      },
+                      "minItems": 2,
+                      "maxItems": 2
+                    }
+                  },
+                  "round": {
+                    "type": "number"
+                  },
+                  "thread": {
+                    "type": "object",
+                    "properties": {
+                      "pitch": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "holes": {
+              "type": "array",
+              "maxItems": 60,
+              "items": {
+                "type": "object",
+                "required": [],
+                "properties": {
+                  "for": {
+                    "type": "string",
+                    "enum": [
+                      "M2",
+                      "M2.5",
+                      "M3",
+                      "M4",
+                      "M5",
+                      "M6",
+                      "M8",
+                      "M10"
+                    ]
+                  },
+                  "fit": {
+                    "type": "string",
+                    "enum": [
+                      "clearance",
+                      "tap",
+                      "insert",
+                      "nut",
+                      "thread"
+                    ]
+                  },
+                  "head": {
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "counterbore",
+                      "countersink"
+                    ]
+                  },
+                  "diameter": {
+                    "type": "number"
+                  },
+                  "at": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 3,
+                    "maxItems": 3
+                  },
+                  "axis": {
+                    "type": "string",
+                    "enum": [
+                      "-z",
+                      "+z",
+                      "-x",
+                      "+x",
+                      "-y",
+                      "+y"
+                    ]
+                  },
+                  "depth": {
+                    "type": "number"
+                  },
+                  "pattern": {
+                    "type": "object",
+                    "properties": {
+                      "grid": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer"
+                        },
+                        "minItems": 2,
+                        "maxItems": 2
+                      },
+                      "step": {
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        },
+                        "minItems": 2,
+                        "maxItems": 2
+                      },
+                      "circle": {
+                        "type": "integer"
+                      },
+                      "radius": {
+                        "type": "number"
+                      }
+                    }
+                  },
+                  "face": {
+                    "type": "string",
+                    "enum": [
+                      "top",
+                      "bottom",
+                      "front",
+                      "back",
+                      "left",
+                      "right"
+                    ]
+                  },
+                  "part": {
+                    "type": "integer"
+                  },
+                  "pos": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 2,
+                    "maxItems": 2
+                  },
+                  "dir": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 3,
+                    "maxItems": 3
+                  },
+                  "pitch": {
+                    "type": "number"
+                  }
+                }
+              }
+            },
+            "fillet": {
+              "type": "number"
+            },
+            "fillet_edges": {
+              "type": "string",
+              "enum": [
+                "vertical",
+                "top",
+                "all"
+              ]
+            },
+            "chamfer": {
+              "type": "number"
+            },
+            "chamfer_edges": {
+              "type": "string",
+              "enum": [
+                "bottom",
+                "top",
+                "both"
+              ]
+            },
+            "shell": {
+              "type": "number"
+            },
+            "shell_open": {
+              "type": "string",
+              "enum": [
+                "top",
+                "bottom"
+              ]
+            }
+          }
+        }
+      },
+      "template": {
+        "type": "string",
+        "enum": [
+          "motor_mount",
+          "l_bracket",
+          "enclosure",
+          "mounting_plate",
+          "flange",
+          "spacer",
+          "pipe_clamp",
+          "fit_test",
+          "none"
+        ]
+      },
+      "options": {
+        "type": "object"
+      }
+    }
+  },
+  "instructions": "FreeCAD = exact CAD for mechanical parts. Units mm, Z up.\nFIRST: if the part is one of these READY-MADE designs, answer ONLY {\"name\": …, \"template\": …, \"options\": {…}} with just the options the user asked for (exact standard sizes are built in):\n- motor_mount: a stepper motor mount. options: motor nema14|nema17|nema23, style l|flat, thickness, base_length, base_screw M3…M6, base_holes 2|4 (screws into the table), slots true (to tension a belt), gusset true|false.\n- l_bracket: an angle bracket. options: width, leg_a (on the table), leg_b (up), thickness, screw, holes (per leg 1-4), countersink true|false, gusset true|false.\n- enclosure: a box with a screwed-on lid (corner bosses with heat-set inserts). options: inner [w,d,h], wall, floor, lid, screw, fit insert|tap, corner (radius), board none|raspberry_pi_4|raspberry_pi_5|arduino_uno (adds its standoffs), standoff (height), cable_hole (diameter), vents true.\n- mounting_plate: a flat plate with a grid of holes. options: size [w,d], thickness, screw, grid [nx,ny], margin, countersink true, center_hole (diameter), corner (radius).\n- flange: a round flange for a shaft. options: outer_diameter, thickness, bore (shaft), bolt_circle, bolts (count), screw, hub_diameter, hub_height, set_screw true.\n- spacer: a standoff. options: screw, length, outer_diameter, hex true, fit clearance|tap|insert.\n- pipe_clamp: a 2-piece clamp around a pipe. options: pipe_diameter, width, wall, screw.\nOTHERWISE (template none) give bodies. One BODY per separate part (a box + its lid = 2 bodies); \"reference\": true on bought parts that are only shown.\nPARTS build a body in order: the first is the start, then \"op\" add / cut / intersect. Every shape's \"center\" is its MIDDLE. box: size [x,y,z] (+ \"round\": radius for rounded vertical corners). cylinder / cone / tube: radius (cone: radius2), height, axis x|y|z, tube: wall. sphere: radius. slot (a long round-ended hole): length, width, height = depth, axis = the direction it goes INTO the part, direction = along its length. polygon: points [[x,y],…] (outline seen from above) extruded by height. rotate [x,y,z] degrees. Parts of ONE body must touch or overlap.\nHOLES — the easy way: put them on a FACE of a part: {\"face\": \"top\", \"part\": 1, \"pos\": [u, v]} = on the top face of the body's first part, pos measured from that face's CENTRE (top / bottom: u = x, v = y; front / back: u = x, v = z; left / right: u = y, v = z). The app finds the surface and drills INTO the part. (Or \"at\" [x,y,z] on the surface + \"axis\" -z|+z|-x|+x|-y|+y.) depth in mm, 0 = through. For METAL SCREWS give \"for\" (M2…M10) and \"fit\": clearance (passes) / tap (cuts its thread) / insert (brass heat-set) / nut (hexagon pocket) — the app knows the exact sizes; \"head\": counterbore | countersink. Other holes: \"diameter\". Many holes: \"pattern\": {\"grid\": [2,2], \"step\": [40,30]} (starting at the hole) or {\"circle\": 6, \"radius\": 25} (around it).\nEDGES: \"fillet\": radius (vertical outer edges; fillet_edges top|all), \"chamfer\": size (bottom edges by default). \"shell\": wall = hollow with an open top — ONLY for boxes / containers.\nPrint-friendly: walls 2+ mm, 2.5 mm around screw holes, assembly gaps 0.3-0.4 mm.\nExample (custom): {\"name\": \"sensor holder\", \"template\": \"none\", \"bodies\": [{\"name\": \"holder\", \"parts\": [{\"shape\": \"box\", \"size\": [50, 20, 4], \"center\": [0, 0, 2], \"round\": 3}, {\"shape\": \"box\", \"size\": [20, 4, 30], \"center\": [0, -8, 15]}], \"holes\": [{\"face\": \"top\", \"part\": 1, \"pos\": [-17, 0], \"for\": \"M3\", \"fit\": \"clearance\", \"head\": \"countersink\", \"pattern\": {\"grid\": [2, 1], \"step\": [34, 0]}}, {\"face\": \"front\", \"part\": 2, \"pos\": [0, 8], \"diameter\": 12}]}]} Holes with a \"dir\" and parts with a \"thread\" were made by the user by hand in Create › 3D: keep them exactly as they are (same numbers) unless the user asks to change them. fit_test: the micro-gauge — pegs + holes 0.0-0.4 mm bigger (options: diameter 10, peg_height 8): one 15-minute print tells the printer's real fit; pick it for \"fit test\", \"tolerance test\", \"what clearance does my printer need\"."
+}

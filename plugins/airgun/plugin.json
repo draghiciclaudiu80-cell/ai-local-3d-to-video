@@ -1,0 +1,109 @@
+{
+  "id": "airgun",
+  "name": "Airgun calculators (energy, ballistics, PCP fill)",
+  "kind": "calculator",
+  "about": "Like ChairGun / MERO / PCPFill, offline: muzzle energy (J / ft·lb) and the velocity for an energy limit, a trajectory table (path, holdover in cm / mrad / MOA, velocity, energy, wind drift, best zero for a kill zone) from the pellet's G1 BC, and how many PCP fills a scuba or carbon tank gives.",
+  "description": "Airgun numbers for target shooting / pest control: muzzle energy and energy limits, trajectory / holdover / zero / kill zone / wind drift (G1 BC), PCP fills from a scuba or carbon tank and shots per tank. Use it whenever an answer needs a number — don't guess.",
+  "triggers": [
+    "muzzle energy",
+    "ft-lb",
+    "ft lb",
+    "ftlb",
+    "fpe",
+    "foot pounds",
+    "holdover",
+    "hold over",
+    "chairgun",
+    "mero",
+    "pcpfill",
+    "pcp fill",
+    "kill zone",
+    "killzone",
+    "mil dot",
+    "mildot",
+    "zeroed at",
+    "pellet drop",
+    "scuba tank",
+    "buddy bottle",
+    "carbon fiber tank",
+    "carbon fibre tank",
+    "how many fills",
+    "fills from",
+    "energie la gura"
+  ],
+  "keywords": [
+    "air",
+    "ballistic",
+    "bar",
+    "bottle",
+    "buddy",
+    "carbon",
+    "chairgun",
+    "chrono",
+    "chronograph",
+    "energie",
+    "fills",
+    "fpe",
+    "fps",
+    "ft-lb",
+    "ftlb",
+    "grains",
+    "hold",
+    "holdover",
+    "joules",
+    "kill",
+    "limit",
+    "mero",
+    "mil-dot",
+    "mildot",
+    "moa",
+    "mrad",
+    "muzzle",
+    "over",
+    "pcp",
+    "pellet",
+    "refill",
+    "reservoir",
+    "rifle",
+    "scuba",
+    "table",
+    "trajectory",
+    "umplere",
+    "velocity",
+    "zone"
+  ],
+  "run": [
+    "{python}",
+    "{root}/plugins/engineering/calc.py",
+    "{input}",
+    "{outdir}",
+    "airgun"
+  ],
+  "timeout": 30,
+  "parameters": {
+    "type": "object",
+    "required": [
+      "calc",
+      "inputs"
+    ],
+    "properties": {
+      "calc": {
+        "type": "string",
+        "enum": [
+          "energy",
+          "trajectory",
+          "pcp_fill"
+        ]
+      },
+      "inputs": {
+        "type": "object",
+        "maxProperties": 14,
+        "additionalProperties": {
+          "type": "string",
+          "maxLength": 60
+        }
+      }
+    }
+  },
+  "instructions": "Pick ONE calculator and fill its inputs from the request. Write every value WITH its unit as text (\"8.44 gr\", \"0.547 g\", \"900 fps\", \"280 m/s\", \"30 m\", \"45 mm\", \"232 bar\", \"180 cc\"). Leave out what the user didn't say. Calculators and their inputs:\n- energy: pellet_weight, velocity, limit (\"16.3 J\" / \"12 ft-lb\")\n- trajectory: velocity, pellet_weight, bc (G1, e.g. 0.021), scope_height, zero, max_range, step, wind, temperature, kill_zone\n- pcp_fill: tank_volume (\"12 l\"), tank_pressure, reservoir (\"180 cc\"), fill_pressure, refill_pressure, shots_per_fill\nExample: {\"calc\": \"trajectory\", \"inputs\": {\"velocity\": \"880 fps\", \"pellet_weight\": \"15.89 gr\", \"bc\": \"0.031\", \"zero\": \"30 m\"}}. Answer with the JSON only."
+}
