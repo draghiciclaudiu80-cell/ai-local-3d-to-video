@@ -101,6 +101,20 @@ if (-not $SkipDownloads) {
     & "$App\.venv\Scripts\python.exe" "$App\tools\get_downloads.py" --os win --groups ($groups -join ",")
     if ($LASTEXITCODE) { Die "a download didn't finish" }
 }
+# Laya for llama.cpp: made HERE from the downloaded model with llama.cpp's own converter (tools\laya_convert, MIT) -
+# byte for byte the file the author tested; ~450 MB of RAM instead of ~1.9 GB. If it fails, the Python Laya is used.
+$gguf = "$App\models\laya-gguf\typed-decisions-Q8_0.gguf"; $ckpt = "$App\models\laya-real\typed-decisions"
+if (-not (Test-Path $gguf) -and (Test-Path "$ckpt\model.safetensors") -and (Test-Path "$E\llama-laya\llama-server.exe") -and (Test-Path "$E\laya\venv\Scripts\python.exe")) {
+    Say "  making Laya's llama.cpp file from the downloaded model (about 20 s)..."
+    New-Item -ItemType Directory -Force (Split-Path $gguf) | Out-Null
+    $env:HF_HUB_OFFLINE = "1"; $env:TRANSFORMERS_OFFLINE = "1"
+    $sp = @{ FilePath = "$E\laya\venv\Scripts\python.exe"; Wait = $true; PassThru = $true; WindowStyle = "Hidden"
+             ArgumentList = "`"$App\tools\laya_convert\convert_hf_to_gguf.py`" `"$ckpt`" --outtype q8_0 --outfile `"$gguf`" --model-name `"Laya typed-decisions`""
+             RedirectStandardOutput = "$env:TEMP\laya-convert.out"; RedirectStandardError = "$env:TEMP\laya-convert.log" }
+    $conv = Start-Process @sp
+    if ($conv.ExitCode -or -not (Test-Path $gguf)) { Remove-Item $gguf -ErrorAction SilentlyContinue; Say "  Laya stays in its Python version (see %TEMP%\laya-convert.log)" Yellow }
+    else { Say "  Laya ready for llama.cpp" Green }
+}
 
 # ---------------------------------------------------------------- 5) the starter + settings
 Step "5/7  The starter (Local AI.exe) and a fresh settings file"

@@ -7,6 +7,7 @@ their official sites; each keeps its own license (follow the links for the full 
 | Part | What for | License |
 |---|---|---|
 | [llama.cpp](https://github.com/ggml-org/llama.cpp) | runs the chat / memory / helper models | MIT |
+| llama.cpp b11384 + its converter (`tools/laya_convert`: convert_hf_to_gguf.py, conversion/, gguf-py — included unchanged, with its LICENSE) | turns the downloaded Laya model into a GGUF at install time and runs it (~450 MB of RAM instead of ~1.9 GB) | MIT |
 | [stable-diffusion.cpp](https://github.com/leejet/stable-diffusion.cpp) | pictures and video clips | MIT |
 | [Tor](https://www.torproject.org) | private web search | BSD-3-Clause |
 | [Blender](https://www.blender.org/about/license/) | builds the 3D designs, cut to fit | GNU GPL |
