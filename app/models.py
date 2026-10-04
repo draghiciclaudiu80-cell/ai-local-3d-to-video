@@ -293,7 +293,7 @@ def scan() -> list[dict]:
     seen, out = set(), []
     for base in model_dirs():
         for p in base.rglob("*"):
-            if p.suffix not in (".gguf", ".safetensors") or not p.is_file():
+            if p.suffix not in (".gguf", ".safetensors") or not p.is_file() or THREE_D in p.parents:
                 continue
             key = (p.name.lower(), p.stat().st_size)
             if key in seen:  # same file in two folders
@@ -396,7 +396,12 @@ def repo_folder(repo: str) -> Path:
     return MODELS / repo.replace("/", "__")
 
 
+THREE_D = MODELS / "3d"  # 3D AI models (app/models3d.py): kept apart, never scanned as picture / video / chat models
+
+
 def _local(repo: str, path: str, local: str | None) -> Path:
+    if local and local.startswith("@3d/"):  # a 3D model keeps its folders (several files share names like config.json)
+        return THREE_D / repo.replace("/", "__") / local[4:]
     return repo_folder(repo) / (local or path.rsplit("/", 1)[-1])
 
 
@@ -404,7 +409,7 @@ def _all_names() -> set[str]:
     """Names of every model file on this PC (refreshed every few seconds) — searches check many files at once."""
     def fetch():
         return {p.name.lower() for base in model_dirs() for p in base.rglob("*")
-                if p.suffix in (".gguf", ".safetensors") and p.is_file()}
+                if p.suffix in (".gguf", ".safetensors") and p.is_file() and THREE_D not in p.parents}
     return _cached("names", 5, fetch)
 
 

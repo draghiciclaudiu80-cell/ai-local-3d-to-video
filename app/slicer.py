@@ -15,7 +15,7 @@ from pathlib import Path
 
 from . import plugins, wipe
 from .config import DATA, ENGINES, MEDIA, NO_WINDOW, load_settings
-from .plat import IS_WIN, kill_tree
+from .plat import IS_WIN, kill_tree, spawn
 
 PRINTERS = Path(__file__).resolve().parent / "printers"
 TIMEOUT = 1200  # a big device on fine layers takes minutes
@@ -157,7 +157,7 @@ def make_gcode(stls: list[Path], opts: dict, rid: str | None = None, name: str =
             "--export-3mf", "project.3mf", "--outputdir", str(out), *[str(s) for s in stls]]  # (a bare name: a full path made no 3MF)
     t0, proc = time.time(), None
     try:
-        proc = subprocess.Popen(args, cwd=str(work), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+        proc = spawn(args, cwd=str(work), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
                                 encoding="utf-8", errors="ignore", creationflags=NO_WINDOW)
         plugins.run_set(rid, proc=proc)
         while proc.poll() is None:

@@ -30,6 +30,7 @@ their official sites; each keeps its own license (follow the links for the full 
 | [Whisper small](https://huggingface.co/Systran/faster-whisper-small) (OpenAI, converted by Systran) | speech to text | MIT |
 | [Kokoro-82M](https://huggingface.co/fastrtc/kokoro-onnx) | natural voices | Apache-2.0 |
 | [Piper voices](https://huggingface.co/rhasspy/piper-voices) | fast voices | per voice — see its MODEL_CARD |
+| [SDXL Turbo](https://huggingface.co/stabilityai/sdxl-turbo) (Stability AI, GGUF by OlegSkutte) | makes pictures (optional) | Stability AI Non-Commercial Community License |
 | [Laya checkpoints](https://huggingface.co/convaiinnovations/laya) | decision model | Apache-2.0 |
 | [Woosh weights](https://github.com/SonyResearch/Woosh) (Sony AI) | sound effects (optional) | CC-BY-NC-4.0 (non-commercial) |
 | [Synchformer weights](https://huggingface.co/hkchengrex/MMAudio) (via MMAudio) | sound matched to video (optional) | see the MMAudio repository |

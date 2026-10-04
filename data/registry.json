@@ -1,3 +1,4 @@
 {
- "qwen3.5-4b-q4_k_m.gguf": "text"
+ "qwen3.5-4b-q4_k_m.gguf": "text",
+ "sd_xl_turbo_1.0.q8_0.gguf": "image"
 }

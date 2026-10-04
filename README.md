@@ -17,19 +17,21 @@ you type, say or make leaves your computer.
 - **Pictures and videos** with stable-diffusion.cpp, and **long videos / movies** joined from clips, with narration and
   sound effects (Sony's Woosh model, optional).
 - **3D design that works**: tested ready-made devices (robot arm sized for its load, robotic hand, foam-dart blasters,
-  pump, gears, drone frame, boxes with lids…), designs built part by part with a fit check (no parts may collide), an
+  fidget spinner, pump, gears, drone frame, boxes with lids…), designs built part by part with a fit check (no parts may collide), an
   editor to change them by hand (move, stretch, holes, threads, **mirror**, Ctrl+click to select several parts),
   **cut to fit** your printer's plate, and **G-code for your printer** with OrcaSlicer — all offline.
 - **Engineering calculators** the AI uses by itself: mechanics, fluids, electronics / PCB, airgun energy and
   trajectory, a robot-arm tool (inverse kinematics, servo choice), a parts inventory.
 - **Bigger models**: the Models page downloads any GGUF model from Hugging Face and shows what each can do (tools,
-  vision, video, thinking) before you pick it.
+  vision, video, thinking) before you pick it. Its **3D** tab finds and downloads picture-to-3D AI models (TRELLIS,
+  TripoSG, PartCrafter, Hunyuan3D…) to keep for a stronger PC — most need an NVIDIA card.
 
 ## What you need
 
 - **Windows 10 / 11 (64-bit)** or **Linux** (made on Bazzite / Fedora Atomic; Ubuntu works too)
 - 16 GB of memory recommended (8 GB minimum)
-- about **12 GB** of free disk space (17 GB with the sound effects; more for bigger models)
+- about **16 GB** of free disk space (12 GB without the picture model, 21 GB with the sound effects; more for bigger
+  models)
 - a graphics card helps a lot (AMD, NVIDIA or Intel — Vulkan). Without one it works, just slower.
 
 ## Install
@@ -40,7 +42,7 @@ you type, say or make leaves your computer.
    not OneDrive).
 2. Double-click **`INSTALL.cmd`**. It downloads Python, the engines and the models from their official sites (each
    file checked by its SHA-256), builds the starter and makes a desktop icon. About 8 GB for the basics — it asks about
-   the optional parts (3D printing, exact CAD, sound effects). If the download stops, run it again: it goes on.
+   the optional parts (pictures, 3D printing, exact CAD, sound effects). If the download stops, run it again: it goes on.
 3. Start **AI Local** from the desktop. The first start checks your PC (Settings → This PC) and offers fixes.
 
 **Linux**
@@ -48,7 +50,7 @@ you type, say or make leaves your computer.
 ```bash
 git clone https://github.com/draghiciclaudiu80-cell/ai-local-3d-to-video.git
 cd ai-local-3d-to-video
-bash install.sh            # add --no-sound to skip the 4.3 GB sound-effect models
+bash install.sh            # --no-pictures / --no-sound skip the 3.8 GB / 4.3 GB optional models
 ```
 
 Everything stays inside the folder (its own Python, engines and models); nothing is installed into the system.

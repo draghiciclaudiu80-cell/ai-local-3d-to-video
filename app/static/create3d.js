@@ -41,7 +41,8 @@ const DEFAULTS = { center: [0, 0, 0], rotate: [0, 0, 0], size: [30, 30, 30], rad
 const VEC = new Set(["center", "rotate", "size", "from", "to"]);
 const PG_TPL = [["dart_blaster", "Dart blaster (Nerf-style pistol)"], ["centrifugal_pump", "Water pump (DC motor)"], ["gear_pair", "Gear pair"],
   ["box_with_lid", "Box with lid"], ["handcuffs", "Handcuffs (hinged + chain)"], ["revolver_blaster", "Revolver blaster (6-shot)"],
-  ["robot_arm", "Robot arm (4 servos, 300 mm)"], ["robot_hand", "Robotic hand (tendons)"]];
+  ["robot_arm", "Robot arm (4 servos, 300 mm)"], ["robot_hand", "Robotic hand (tendons)"],
+  ["fidget_spinner", "Fidget spinner (608 bearings)"]];
 const FC_TPL = [["motor_mount", "Motor mount (NEMA 17 stepper)"], ["l_bracket", "L bracket"], ["enclosure", "Electronics box (Raspberry Pi / Arduino)"],
   ["mounting_plate", "Mounting plate"], ["flange", "Flange (shaft hub)"], ["spacer", "Spacer / standoff"], ["pipe_clamp", "Pipe clamp"],
   ["fit_test", "Fit test — find your printer's clearance (15 min print)"]];

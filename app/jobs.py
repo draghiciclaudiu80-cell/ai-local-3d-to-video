@@ -13,7 +13,7 @@ from pathlib import Path
 from . import db, wipe
 from .config import DATA, ENGINES, LOGS, MEDIA, NO_WINDOW, SOUNDS
 from .models import active_path, find_file, image_parts, video_parts
-from .plat import exe, lib_env, memory_gb
+from .plat import exe, lib_env, memory_gb, spawn
 
 STYLES = {
     "None": "",
@@ -195,7 +195,7 @@ class Renderer:
         with self.cv:
             if job.get("cancel"):
                 return False, []
-            p = subprocess.Popen([str(exe(ENGINES / "sd", "sd-cli")), *args], stdout=subprocess.PIPE, env=lib_env(ENGINES / "sd"),
+            p = spawn([str(exe(ENGINES / "sd", "sd-cli")), *args], stdout=subprocess.PIPE, env=lib_env(ENGINES / "sd"),
                                  stderr=subprocess.STDOUT, creationflags=NO_WINDOW, text=True, errors="ignore")
             job["proc"] = p
         spans = SPANS[job["kind"]]

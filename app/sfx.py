@@ -13,7 +13,7 @@ import time
 from pathlib import Path
 
 from .config import DATA, ENGINES, NO_WINDOW
-from .plat import kill_tree, venv_python
+from .plat import kill_tree, spawn, venv_python
 
 ROOT = ENGINES / "woosh"
 PY = venv_python(ROOT / "venv")
@@ -72,7 +72,7 @@ def make(clips: list[tuple[Path, str]], cancelled=lambda: False, status=lambda s
     job = tmp / "job.json"
     job.write_text(json.dumps({"items": items}), encoding="utf-8")
     env = {k: v for k, v in os.environ.items() if not k.startswith("PYTHON")}  # its own Python, nothing of ours
-    proc = subprocess.Popen([str(PY), str(ROOT / "run_sfx.py"), str(job)], cwd=str(ROOT), env=env,
+    proc = spawn([str(PY), str(ROOT / "run_sfx.py"), str(job)], cwd=str(ROOT), env=env,
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8",
                             errors="replace", creationflags=NO_WINDOW)
     t0, tail, result = time.time(), [], None

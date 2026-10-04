@@ -13,7 +13,7 @@ import time
 import httpx
 
 from .config import DATA, ENGINES, LLM_PORT, LOGS, NO_WINDOW, load_settings
-from .plat import exe, lib_env
+from .plat import exe, lib_env, spawn
 
 PORT = LLM_PORT + 3  # 8774 (8771 chat, 8772 Laya, 8773 memory)
 EXE = exe(ENGINES / "tor", "tor")
@@ -57,7 +57,7 @@ class Tor:
                 f"__OwningControllerProcess {os.getpid()}",  # Tor quits if the app is gone
             ]) + "\n", encoding="utf-8")
             self.progress = 0
-            self.proc = subprocess.Popen([str(EXE), "-f", str(DIR / "torrc"), "--defaults-torrc", str(DIR / "none")],
+            self.proc = spawn([str(EXE), "-f", str(DIR / "torrc"), "--defaults-torrc", str(DIR / "none")],
                                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
                                          encoding="utf-8", errors="ignore", creationflags=NO_WINDOW,
                                          env=lib_env(EXE.parent))

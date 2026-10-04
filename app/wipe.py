@@ -136,13 +136,11 @@ def sweep(job_ids: set[str]) -> dict:
     for d in (DATA / "attachments").glob("*"):
         if d.is_dir() and d.name not in att_used and time.time() - d.stat().st_mtime > 6 * 3600:
             n += shred_tree(d) or 1
-    for d in DATA.glob("sfx-*"):  # the sound-effects step's work folders (a crash or restart mid-way)
-        if d.is_dir():
+    old_runs = [d for d in (DATA / "plugin-runs").glob("*") if d.is_dir() and time.time() - d.stat().st_mtime > 6 * 3600]
+    for d in [*DATA.glob("sfx-*"), *old_runs]:  # work folders of the sound-effects step / 3D runs (a crash or a restart
+        if d.is_dir():  # mid-way: two 3D runs had left 124 MB of parts and their request behind)
             shred_tree(d)
-            try:
-                d.rmdir()
-            except OSError:
-                pass
+            n += 1
     chats = {c["id"] for c in db.q("SELECT id FROM chats")}
     drop_lines(SELFCHECK, lambda x: _chat_of(x) not in chats)
     free = db.q("PRAGMA freelist_count")[0]

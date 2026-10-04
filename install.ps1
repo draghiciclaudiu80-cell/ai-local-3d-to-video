@@ -3,7 +3,7 @@
 #   from their official sites - every file checked by its SHA-256 - builds the starter "Local AI.exe" with Windows' own
 #   C# compiler, makes the shortcuts and starts the app. Nothing is installed into Windows except Microsoft's Visual
 #   C++ runtime (if it's missing). About 8 GB for the basics. Run it again any time: it goes on where it stopped.
-#   Options: -Optional "print,cad,sound" (or "none") instead of asking, -Quiet, -NoStart
+#   Options: -Optional "pictures,print,cad,sound" (or "none") instead of asking, -Quiet, -NoStart
 param([switch]$Quiet, [string]$Optional = "ask", [switch]$NoStart, [switch]$SkipDownloads, [switch]$NoShortcuts)  # the last two: for tests
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"   # PowerShell's progress bar makes downloads ~10x slower
@@ -38,6 +38,7 @@ if ($App -match "[^\x20-\x7E]") { Say "Note: the folder's name has special lette
 $groups = @("core")
 if ($Optional -eq "ask") {
     Say "The basics are about 8 GB. Optional parts (you can add them later by running INSTALL.cmd again):"
+    if ((Ask "  making pictures - SDXL Turbo (3.8 GB)? [Y/n]" "y") -ne "n") { $groups += "pictures" }
     if ((Ask "  3D printing - OrcaSlicer, G-code for your printer (0.2 GB)? [Y/n]" "y") -ne "n") { $groups += "print" }
     if ((Ask "  exact CAD parts - FreeCAD, STEP files (0.4 GB)? [y/N]" "n") -eq "y") { $groups += "cad" }
     if ((Ask "  sound effects for videos (4.3 GB)? [y/N]" "n") -eq "y") { $groups += "sound" }

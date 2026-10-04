@@ -20,8 +20,8 @@ import httpx
 
 from . import db
 from .config import ENGINES, LLM_PORT, LOGS, MODELS, NO_WINDOW, load_settings
-from .plat import exe, lib_env
-from .llm import llm
+from .plat import exe, lib_env, spawn
+from .llm import AUTH, ENGINE_KEY, llm
 
 PERSONAL = re.compile(r"\b(i|i'm|im|i've|i'd|my|me|mine|myself|eu|meu|mea|mei|mele|mie|sunt|am|îmi|imi|mă|ma)\b", re.I)
 
@@ -53,14 +53,16 @@ class Embedder:
             if not m:
                 return False
             log = open(LOGS / "memory.log", "w", encoding="utf-8", errors="ignore")
-            self.proc = subprocess.Popen(
+            self.proc = spawn(
                 [str(exe(ENGINES / "llama", "llama-server")), "-m", str(m), "--host", "127.0.0.1", "--port", str(self.PORT),
-                 "--embedding", "-ngl", "0", "--device", "none", "-t", "4", "-c", "2048", "-b", "2048", "-ub", "2048"],
+                 "--embedding", "-ngl", "0", "--device", "none", "-t", "4", "-c", "2048", "-b", "2048", "-ub", "2048",
+                 "--api-key", ENGINE_KEY],
                 stdout=log, stderr=subprocess.STDOUT, creationflags=NO_WINDOW, env=lib_env(ENGINES / "llama"))
-            async with httpx.AsyncClient(timeout=2) as c:
+            proc = self.proc
+            async with httpx.AsyncClient(timeout=2, headers=AUTH) as c:
                 for _ in range(60):
-                    if self.proc.poll() is not None:
-                        return False
+                    if self.proc is not proc or proc.poll() is not None:  # it ended, or stop() ran meanwhile (self.proc
+                        return False  # = None crashed here: "'NoneType' object has no attribute 'poll'")
                     try:
                         if (await c.get(f"{self.url}/health")).status_code == 200:
                             return True
@@ -80,7 +82,7 @@ class Embedder:
             return None
         self.used = time.time()
         items = [(f"task: search result | query: {t}" if query else f"title: none | text: {t}")[:2000] for t in texts]
-        async with httpx.AsyncClient(timeout=120) as c:
+        async with httpx.AsyncClient(timeout=120, headers=AUTH) as c:
             r = await c.post(f"{self.url}/v1/embeddings", json={"input": items})
             r.raise_for_status()
         return [d["embedding"] for d in r.json()["data"]]
@@ -340,12 +342,12 @@ async def learn(chat_id: str, msg_id: int | None, text: str, reply: str) -> list
 async def consolidate(old: str, new: str) -> str:
     """Decision mode: 'same' (nothing new), 'more' (the new one says more — it replaces the old) or 'different'."""
     try:
-        p = await llm.decide(
+        p = await llm.decide((  # (fixed instructions, the new part): the engine keeps the fixed part
             "Two facts about the same user. Answer with ONE word:\n"
             "same = the new fact says nothing the old one doesn't (e.g. \"my name is Alex\" / \"The user's name is Alex.\")\n"
             "more = the new fact says the same thing with more detail (e.g. \"has a dog\" / \"has a pitbull named Rex\")\n"
-            "different = they are about different things (e.g. \"likes pizza\" / \"likes pasta\")\n"
-            f"Old fact: \u00ab{old}\u00bb\nNew fact: \u00ab{new}\u00bb\nWord:", ["same", "more", "different"])
+            "different = they are about different things (e.g. \"likes pizza\" / \"likes pasta\")\n",
+            f"Old fact: \u00ab{old}\u00bb\nNew fact: \u00ab{new}\u00bb\nWord:"), ["same", "more", "different"])
     except (httpx.HTTPError, KeyError, ValueError, IndexError):
         return "different"
     return max(p, key=p.get)
@@ -490,17 +492,25 @@ async def after_turn(chat_id: str, msg_id: int | None, text: str, reply: str, dr
     """Learn facts, refresh the profile, summarize what fell out of the chat window — quietly, when the model is
     free, never while it renders (the graphics chip is busy then)."""
     from .jobs import renderer
-    for _ in range(900):  # up to 15 min: a render (graphics chip busy) or a reply in progress comes first
-        if llm.busy <= 0 and not renderer.busy() and llm.running() and llm.gpu:
-            break
-        await asyncio.sleep(1)
-    else:
-        return
-    try:
-        added = await learn(chat_id, msg_id, text, reply)
-        if added or (db.q("SELECT 1 FROM facts WHERE COALESCE(kind,'')<>'rule' LIMIT 1") and meta("persona_key") != _facts_key()):
-            await refresh_persona()
-        if dropped_upto and chat_summary(chat_id)[1] < dropped_upto:
-            await summarize(chat_id, dropped_upto)
-    except (httpx.HTTPError, ValueError, KeyError, AttributeError) as e:
-        print("memory after_turn:", repr(e))
+    for attempt in (1, 2):  # a second try: the model was still loading (503) or got unloaded for a render meanwhile
+        for _ in range(900):  # up to 15 min: a render (graphics chip busy) or a reply in progress comes first
+            if llm.busy <= 0 and not renderer.busy() and llm.running() and llm.gpu:
+                break
+            await asyncio.sleep(1)
+        else:
+            return
+        try:
+            added = await learn(chat_id, msg_id, text, reply)
+            if added or (db.q("SELECT 1 FROM facts WHERE COALESCE(kind,'')<>'rule' LIMIT 1") and meta("persona_key") != _facts_key()):
+                await refresh_persona()
+            if dropped_upto and chat_summary(chat_id)[1] < dropped_upto:
+                await summarize(chat_id, dropped_upto)
+            return
+        except (httpx.HTTPStatusError, httpx.TransportError) as e:
+            if attempt == 1:
+                await asyncio.sleep(20)
+                continue
+            print("memory after_turn:", repr(e))
+        except (httpx.HTTPError, ValueError, KeyError, AttributeError) as e:
+            print("memory after_turn:", repr(e))
+            return

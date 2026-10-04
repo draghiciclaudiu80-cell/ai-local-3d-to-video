@@ -28,7 +28,7 @@ from PIL import Image, ImageDraw
 
 from . import db, mirror3d, wipe
 from .config import DATA, ENGINES, MEDIA, NO_WINDOW, ROOT, load_settings, save_settings
-from .plat import kill_tree
+from .plat import kill_tree, spawn
 
 BUILTIN = ROOT / "plugins"
 DOTNET = ENGINES / "dotnet"
@@ -93,11 +93,27 @@ def usable() -> list[dict]:
     return [p for p in all_plugins() if p["enabled"] and p["ready"]]
 
 
+REQUEST = {"type": "object", "properties": {"request": {"type": "string", "description": "what to make or change, in the "
+                                                        "user's words, with every size"}}, "required": ["request"]}
+
+
+def slim(p: dict) -> bool:
+    """Offered to the main model SHORT (only "request"): the 3D engines and every plugin with a long form. The app fills
+    the real form itself when the model calls it (agent.plugin_params, with the full form + instructions)."""
+    return p["id"] in ENGINES_3D or len(json.dumps(p.get("parameters") or {})) > 500
+
+
 def tools() -> list[dict]:
-    """Every usable plugin, as a tool the main model can call."""
-    return [{"type": "function", "function": {"name": f"plugin_{p['id']}", "description": f"{p.get('name', p['id'])}: {p.get('description', '')}",
-             "parameters": p.get("parameters") or {"type": "object", "properties": {"request": {"type": "string"}}, "required": ["request"]}}}
-            for p in usable()]
+    """Every usable plugin, as a tool the main model can call. The full forms were ~6,700 of the ~8,400 tokens of tools
+    the model re-reads before an answer (Bonsai 27B reads ~65 tokens a second = 2 minutes; Qwen 3.5 4B ~20 s)."""
+    out = []
+    for p in usable():
+        desc, params = f"{p.get('name', p['id'])}: {p.get('description', '')}", p.get("parameters") or REQUEST
+        if slim(p):
+            cut = desc.find(". ", 80, 320)
+            desc, params = (desc[:cut + 1] if cut > 0 else desc[:320]) + " Pass the user's request; the app does the rest.", REQUEST
+        out.append({"type": "function", "function": {"name": f"plugin_{p['id']}", "description": desc, "parameters": params}})
+    return out
 
 
 ENGINES_3D = ("picogk", "blender", "freecad")
@@ -268,7 +284,7 @@ def blender_finish(gid: str, name: str, m3: dict, rid: str | None = None) -> Non
     (work / "in.json").write_text(json.dumps({"mode": "finish", "name": name, "bodies": items}), encoding="utf-8")
     run_set(rid, pct=0.97, text="Blender is rendering the picture and the GLB…")
     try:
-        p = subprocess.Popen([sys.executable, str(Path(b["path"]) / "run.py"), str(work / "in.json"), str(out)],
+        p = spawn([sys.executable, str(Path(b["path"]) / "run.py"), str(work / "in.json"), str(out)],
                              stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, encoding="utf-8", errors="ignore",
                              creationflags=NO_WINDOW)
         run_set(rid, proc=p)  # the Stop button reaches it too
@@ -332,7 +348,7 @@ def cut_to_fit(m3: dict, bed=None, pin: str = "filament", rid: str | None = None
     (work / "in.json").write_text(json.dumps({"mode": "cut", "name": name, "bodies": bodies, "bed": bed, "pin": pin}), encoding="utf-8")
     run_set(rid, phase="build", pct=0.5, text="Cutting it into pieces that fit the printer…")
     try:
-        p = subprocess.Popen([sys.executable, str(Path(b["path"]) / "run.py"), str(work / "in.json"), str(out)],
+        p = spawn([sys.executable, str(Path(b["path"]) / "run.py"), str(work / "in.json"), str(out)],
                              stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, encoding="utf-8", errors="ignore",
                              creationflags=NO_WINDOW)
         run_set(rid, proc=p)
@@ -501,7 +517,7 @@ def run(pid: str, params: dict, rid: str | None = None, finish: bool = True, pre
     inp.write_text(json.dumps(params), encoding="utf-8")
     env = {**os.environ, "DOTNET_ROOT": str(DOTNET), "DOTNET_CLI_TELEMETRY_OPTOUT": "1", "DOTNET_NOLOGO": "1"}
     try:
-        p = subprocess.Popen([_expand(a, m, str(inp), str(outdir)) for a in m["run"]], stdout=subprocess.PIPE,
+        p = spawn([_expand(a, m, str(inp), str(outdir)) for a in m["run"]], stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="ignore", env=env, cwd=m["path"],
                              creationflags=NO_WINDOW)
         run_set(rid, proc=p)

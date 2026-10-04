@@ -4,7 +4,7 @@
 #   bash install.sh --copy     first copy it to ~/LocalAI (e.g. from a USB stick); an update keeps your data
 #   options: --dest DIR (where --copy puts it)  --no-start  --no-freecad (skip FreeCAD, 0.8 GB)
 #            --no-orca (skip OrcaSlicer: no G-code for the 3D printer, 0.4 GB)  --yes
-#            --no-sound (skip the 4.3 GB sound-effect models when they're downloaded)
+#            --no-sound (skip the 4.3 GB sound-effect models)  --no-pictures (skip the 3.8 GB picture model)
 # Everything stays inside the app folder: its own Python 3.11 and Python packages, llama.cpp + stable-diffusion.cpp
 # (Vulkan = the graphics chip), Tor, Blender, FreeCAD, OrcaSlicer (G-code for the 3D printer). Nothing is installed
 # into the system: no sudo, fine on an immutable OS. Downloads about 2.7 GB, each file checked against a pinned SHA-256.
@@ -13,7 +13,7 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
-COPY=0; DEST="$HOME/LocalAI"; START=1; FREECAD=1; ORCA=1; SOUND=1
+COPY=0; DEST="$HOME/LocalAI"; START=1; FREECAD=1; ORCA=1; SOUND=1; PICS=1
 while [ $# -gt 0 ]; do
     case "$1" in
         --copy) COPY=1 ;;
@@ -22,6 +22,7 @@ while [ $# -gt 0 ]; do
         --no-freecad) FREECAD=0 ;;
         --no-orca) ORCA=0 ;;
         --no-sound) SOUND=0 ;;
+        --no-pictures) PICS=0 ;;
         --yes|-y) ;;
         -h|--help) sed -n '2,11p' "$0"; exit 0 ;;
         *) echo "unknown option: $1 (see: bash install.sh --help)"; exit 2 ;;
@@ -148,6 +149,15 @@ if [ ! -x "$E/llama/llama-server" ]; then
     tar -xzf "$DL/llama.tar.gz" -C "$E/llama" --strip-components=1
 fi
 ok "llama-server ready"
+# Laya as a GGUF (a copy made on the main PC brings models/laya-gguf): the newer llama.cpp runs it on the processor,
+# ~450 MB of RAM instead of ~1.9 GB for the Python Laya (which stays as the fallback)
+if ls "$APP/models/laya-gguf/"*-Q8_0.gguf >/dev/null 2>&1 && [ ! -x "$E/llama-laya/llama-server" ]; then
+    get "https://github.com/ggml-org/llama.cpp/releases/download/b11384/llama-b11384-bin-ubuntu-x64.tar.gz" llama-laya.tar.gz \
+        fb688a481d4d18d7528445f6732a7a68b9bdd46d57e977c369197376c2860bf3
+    rm -rf "$E/llama-laya"; mkdir -p "$E/llama-laya"
+    tar -xzf "$DL/llama-laya.tar.gz" -C "$E/llama-laya" --strip-components=1
+    ok "Laya engine ready (llama.cpp b11384, processor)"
+fi
 
 # ---------------------------------------------------------------- 5) stable-diffusion.cpp (pictures + videos)
 step "5/9  stable-diffusion.cpp master-920 (pictures and videos - Vulkan)"
@@ -222,8 +232,8 @@ if ! id -nG | grep -qw dialout; then  # a 3D printer on USB (/dev/ttyUSB0) needs
 fi
 
 # ---------------------------------------------------------------- models (a GitHub copy downloads them; a USB copy has them)
-step "Models: chat, memory, small helper, Laya, speech, voices (~7 GB from Hugging Face, every file checked)"
-groups="core"; [ "$SOUND" = 1 ] && groups="core,sound"
+step "Models: chat, memory, small helper, Laya, speech, voices$([ "$PICS" = 1 ] && echo ", pictures") (from Hugging Face, every file checked)"
+groups="core"; [ "$PICS" = 1 ] && groups="$groups,pictures"; [ "$SOUND" = 1 ] && groups="$groups,sound"
 "$APP/.venv/bin/python" "$APP/tools/get_downloads.py" --os linux --groups "$groups" \
     || die "the models didn't all download - run install.sh again: it goes on where it stopped"
 

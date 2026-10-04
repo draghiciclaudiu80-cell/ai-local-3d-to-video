@@ -1341,8 +1341,63 @@ def robot_arm(o: dict) -> dict:
                        "upper_arm": round(L1, 1), "forearm": round(L2, 1), "claw": Lj}}
 
 
+def fidget_spinner(o: dict) -> dict:
+    """A classic fidget spinner around a 608 skateboard bearing (22 x 8 x 7 mm): a body with 2-6 arms whose lobes hold
+    more 608 bearings as weights (or solid printed lobes), and two caps pressed into the centre bearing's 8 mm bore from
+    both sides. The caps touch ONLY its inner ring, so the body spins freely while you hold the caps."""
+    n = int(_o(o, "arms", 3, 2, 6))
+    solid = str(o.get("weights", "bearings")).strip().lower() in ("none", "solid", "printed", "no", "false", "0")
+    R = _o(o, "arm_length", 30, 26, 60)          # centre to lobe centre
+    rim = _o(o, "rim", 4, 2.5, 8)                 # wall around each bearing
+    T, OD, ID = 7.0, 22.0, 8.0                    # the 608 bearing
+    hole = OD / 2 + 0.1                           # snug push fit (printed holes come out a little small)
+    rl = hole + rim                               # hub / lobe radius
+    bar = 1.3 * rl                                # arm width
+    g = 0.4                                       # every modelled gap >= 2 voxels: the fit check sees it
+    peg, spacer, cap_r, disc = ID / 2 - 0.05, 5.6, _o(o, "cap_diameter", 21, 16, 30) / 2, 2.4
+    lobes = [(R * math.cos(math.radians(90 + k * 360 / n)), R * math.sin(math.radians(90 + k * 360 / n)),
+              90 + k * 360 / n) for k in range(n)]
+    body = [{"op": "add", "shape": "cylinder", "radius": rl, "height": T, "center": [0, 0, 0]}]
+    for x, y, a in lobes:
+        body.append({"op": "add", "shape": "cylinder", "radius": rl, "height": T, "center": [x, y, 0]})
+        body.append({"op": "add", "shape": "box", "size": [R, bar, T], "center": [x / 2, y / 2, T / 2], "rotate": [0, 0, a]})
+    holes = [(0, 0)] + ([] if solid else [(x, y) for x, y, _ in lobes])
+    body += [{"op": "subtract", "shape": "cylinder", "radius": hole, "height": T + 2, "center": [x, y, -1]} for x, y in holes]
+
+    def cap(top: bool) -> list:  # disc + a spacer ring (rests on the inner ring) + a peg into the bore (stops mid-way)
+        s = 1 if top else -1
+        z_sp = T if top else 0.0                  # the spacer sits on the bearing's face
+        z_disc = z_sp + s * 0.6
+        parts = [{"op": "add", "shape": "cylinder", "radius": cap_r, "height": disc, "center": [0, 0, z_disc if top else z_disc - disc]},
+                 {"op": "add", "shape": "cylinder", "radius": spacer, "height": 0.6, "center": [0, 0, z_sp if top else z_sp - 0.6]},
+                 {"op": "add", "shape": "cylinder", "radius": peg, "height": T / 2 - g / 2, "center": [0, 0, T / 2 + g / 2 if top else 0.0]}]
+        dz = (z_disc + disc + 11.2) if top else (z_disc - disc - 11.2)  # a shallow finger dimple (0.8 mm)
+        return parts + [{"op": "subtract", "shape": "sphere", "radius": 12, "center": [0, 0, dz]}]
+
+    # the bought bearings, drawn 0.4 mm smaller where printed parts press on them (the caps' spacers / pegs, the holes)
+    ref = lambda x, y, bore: {"op": "add", "shape": "tube", "radius": hole - g, "wall": hole - g - bore, "height": T - 2 * g,
+                              "center": [x, y, g]}
+    bodies = [{"name": "spinner body", "parts": body},
+              {"name": "cap (top)", "parts": cap(True)},
+              {"name": "cap (bottom)", "parts": cap(False)},
+              {"name": "608 bearing, centre (buy)", "reference": True, "parts": [ref(0, 0, peg + g)]}]
+    if not solid:
+        bodies.append({"name": f"608 bearings as weights x{n} (buy)", "reference": True,
+                       "parts": [ref(x, y, ID / 2) for x, y, _ in lobes]})
+    xs, ys = [0.0] + [x for x, _, _ in lobes], [0.0] + [y for _, y, _ in lobes]
+    span = max(max(xs) - min(xs), max(ys) - min(ys)) + 2 * rl
+    return {"name": f"fidget spinner, {n} arms", "voxel": 0.2, "bodies": bodies,
+            "notes": (f"Buy {1 if solid else n + 1} x 608 bearing (22 x 8 x 7 mm, skateboard bearing). Print the body flat, "
+                      "0.2 mm layers, 3 walls, 30 %+ infill; print both caps flat, disc down. Push the bearings in (a vice or "
+                      "a table edge): too tight = sand the hole, too loose = a drop of glue. Press one cap in from each side "
+                      "until its ring sits on the centre bearing's inner ring, then hold the caps and flick an arm. For long "
+                      "spins take the shields and grease out of the centre bearing (clean it with alcohol)."
+                      + (" Solid printed lobes are light: it spins for a shorter time than with bearing weights." if solid else "")
+                      + f" About {span:.0f} mm across.")}
+
+
 TEMPLATES = {"dart_blaster": dart_blaster, "revolver_blaster": revolver_blaster, "centrifugal_pump": centrifugal_pump, "gear_pair": gear_pair, "box_with_lid": box_with_lid,
              "handcuffs": handcuffs, "bolt_and_nut": bolt_and_nut, "threaded_jar": threaded_jar, "drum_magazine": drum_magazine,
              "robot_hand": robot_hand, "exo_elbow": exo_elbow, "drum_blaster": drum_blaster, "demo_engine": demo_engine,
              "fpv_drone": fpv_drone, "dart_magazine": dart_magazine, "mag_pistol": mag_pistol, "cap_grenade": cap_grenade,
-             "robot_arm": robot_arm}
+             "robot_arm": robot_arm, "fidget_spinner": fidget_spinner}

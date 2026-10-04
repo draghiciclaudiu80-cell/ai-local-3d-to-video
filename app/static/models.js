@@ -7,13 +7,15 @@ const HINT = {
   video: "Makes clips and movie scenes. Only Wan 2.1 video models work here; “distill” ones are about 5× faster.",
   voice: "Voices for reading replies aloud and for movie narration. Each is ~60 MB and runs on the CPU. Search above: 177 voices in 58 languages.",
   transcription: "Turns your speech into text for the 🎤 button and voice mode. If it mishears you: set your language below and try Whisper Small or Large v3 Turbo.",
+  "3d": "AI models that turn a picture (or text) into a 3D model, or split a model into parts. Almost all need an NVIDIA graphics card, so this PC can't run them yet — download them now to keep them for a stronger PC. They're saved in models\\3d.",
 };
 const FIT = { good: "Runs well", tight: "Tight on memory", no: "Too big" };
 const VERDICT = { ok: "✓ Works in this app", maybe: "? Might work", no: "✕ Won't work here" };
-const SEARCHABLE = ["text", "vision", "image", "video", "voice", "transcription"];
+const SEARCHABLE = ["text", "vision", "image", "video", "voice", "transcription", "3d"];
 const PLACEHOLDER = {
   voice: "Search voices by language or name — e.g. romanian, german, english…",
   transcription: "Search speech-to-text models on Hugging Face — e.g. whisper large, small.en…",
+  "3d": "Search 3D AI models on Hugging Face — e.g. trellis, triposg, partcrafter, hunyuan3d…",
 };
 let maxGb = +store.get("maxGb", "0");
 let pollT, searchT, searchSeq = 0;
@@ -147,7 +149,8 @@ async function load() {
   const pane = $("modelPane");
   pane.innerHTML = "";
   if (t === "transcription") languageCard(r);
-  if (t === "voice" || t === "transcription") simpleList(t, r.items);
+  if (t === "3d") threeDPage(r);
+  else if (t === "voice" || t === "transcription") simpleList(t, r.items);
   else {
     if (t === "text") { pane.append(section("Helper models")); await brainsCard(pane); }
     pane.append(section("On this device"));
@@ -264,6 +267,65 @@ function whisperCard(m) {
   return c;
 }
 
+// ---------- 3D AI models: kept for a stronger PC (this one can't run them yet)
+function threeDPage(r) {
+  const pane = $("modelPane");
+  pane.append(el("div", "notice", esc(r.why)));
+  pane.append(section("On this device"));
+  const gi = el("div", "mgrid"); pane.append(gi);
+  if (!r.installed.length) gi.append(el("div", "empty", "None yet — download one below to keep it for later, or search Hugging Face above."));
+  for (const m of r.installed) {
+    const c = mcard(`<div class="name">${esc(m.name)}</div>
+      <div class="meta">${gb(m.size)} · ${m.files} files · by ${esc(m.repo.split("/")[0])}${m.partial ? " · <b>not finished</b> — press Download again to go on" : ""}</div>
+      <div class="meta">${esc(m.folder)}</div><div class="acts"></div>`);
+    c.querySelector(".acts").append(button(icon("trash"), "sm ghost", async () => {
+      if (!confirm(`Delete ${m.name} (${gb(m.size)})?`)) return;
+      try { await api("/api/models3d?repo=" + encodeURIComponent(m.repo), { method: "DELETE" }); } catch (e) { alert(e.message); }
+      load();
+    }));
+    gi.append(c);
+  }
+  pane.append(section("3D models to keep for later"));
+  const gs = el("div", "mgrid"); pane.append(gs);
+  const shown = r.store.filter(s => !s.size || fits(s.size / 1e9));
+  if (!shown.length) gs.append(el("div", "empty", "Nothing in this size — pick a bigger size above."));
+  for (const s of shown) gs.append(threeDCard(s));
+}
+
+function threeDCard(m) {
+  const meta = m.author ? `by ${esc(m.author)} · ⬇ ${(m.downloads || 0).toLocaleString()} · ${esc(m.updated)}${m.task ? " · " + esc(m.task) : ""}` : "";
+  const status = m.watch ? "Not released yet — check its page later" : m.verdict === "maybe"
+    ? "? An NVIDIA card is here — the app can't start it yet" : "Keep for later — this PC can't run it yet";
+  const c = mcard(`<div class="name">${esc(m.name)}${m.size ? ` <span class="badge info">${gb(m.size)}</span>` : ""}</div>
+    ${meta ? `<div class="meta">${meta}</div>` : ""}${m.does ? `<div class="small">${esc(m.does)}</div>` : ""}
+    ${m.needs ? `<div class="meta">Needs: ${esc(m.needs)}</div>` : ""}
+    ${m.license ? `<div class="small ${m.license.startsWith("⚠") ? "fitbad" : "muted"}">${esc(m.license)}</div>` : ""}
+    <div class="why ${m.verdict === "maybe" ? "maybe" : "no"}">${status}</div><div class="acts"></div>`);
+  const acts = c.querySelector(".acts"), d = m.download;
+  const open = url => api("/api/open", json("POST", { url })).catch(e => alert(e.message));
+  if (m.watch) acts.append(button("Open its page", "sm", () => open(m.watch)));
+  else if (d?.status === "running") {
+    acts.before(el("div", null, `<div class="bar"><i style="width:${Math.round(d.progress * 100)}%"></i></div>
+      <div class="meta">Downloading · ${Math.round(d.progress * 100)}% · ${(d.speed / 1e6).toFixed(1)} MB/s</div>`));
+    acts.append(button("Cancel", "sm danger", async () => {
+      if (!confirm("Cancel this download? The part downloaded so far is deleted.")) return;
+      await api(`/api/downloads/${d.id}`, { method: "DELETE" }); refreshAll();
+    }));
+  } else if (m.present) acts.append(el("span", "active-mark", `${icon("check")}On this PC — kept for later`));
+  else if (m.gated) acts.append(el("span", "meta", "Needs a Hugging Face login to download — not supported"));
+  else {
+    if (d?.status === "error") acts.before(el("div", "why no", `Download stopped: ${esc(d.error)}`));
+    acts.append(button(`${icon("download")}${d?.status === "error" ? "Try again" : "Download" + (m.size ? " " + gb(m.size) : "")}`, "sm", async (e) => {
+      if (!confirm(`${m.name}${m.size ? " (" + gb(m.size) + ")" : ""}: this PC can't run it yet — it's kept in models\\3d for a stronger PC. Download it now?`)) return;
+      e.currentTarget.disabled = true;
+      try { await api("/api/models/download", json("POST", { repo: m.repo, modality: "3d" })); } catch (err) { alert(err.message); }
+      refreshAll();
+    }));
+  }
+  if (m.repo) acts.append(button("Page", "sm ghost", () => open("https://huggingface.co/" + m.repo)));
+  return c;
+}
+
 // ---------- Hugging Face search: results appear while you type
 let resT;
 async function search(quiet = false) {
@@ -281,6 +343,15 @@ async function search(quiet = false) {
   const head = el("div", "row", `<div class="sect grow">${t === "voice" ? "Voices" : "Hugging Face"} · “${esc(q)}” · ${list.length} found</div>`);
   head.append(button("Close", "sm ghost", () => { $("hfQuery").value = ""; box.innerHTML = ""; }));
   box.append(head);
+  if (t === "3d") {
+    const shown3 = list.filter(m => !maxGb || !m.size || m.size / 1e9 <= maxGb);
+    if (!shown3.length) { box.append(el("div", "empty", list.length ? "Nothing in this size — pick a bigger size." : "No 3D models found. Try: trellis, triposg, hunyuan3d, partcrafter, image-to-3d…")); return; }
+    const g3 = el("div", "mgrid"); box.append(g3);
+    for (const m of shown3) g3.append(threeDCard(m));
+    if (list.some(m => m.download?.status === "running"))
+      resT = setTimeout(() => { if ($("p-models").classList.contains("on")) search(true); }, 1500);
+    return;
+  }
   if (t === "voice" || t === "transcription") {
     const shownV = t === "transcription" ? list.filter(m => !maxGb || m.size / 1e9 <= maxGb) : list;
     if (!shownV.length) { box.append(el("div", "empty", t === "voice" ? "No voices match. Try a language: english, romanian, german, spanish…" : "Nothing found. Try: whisper, whisper large, distil…")); return; }

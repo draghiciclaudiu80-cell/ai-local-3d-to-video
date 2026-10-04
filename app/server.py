@@ -17,18 +17,19 @@ from urllib.parse import urlparse
 import httpx
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import BaseModel
 
 from . import agent, attach, awake, computer, db, feedback, models, paper, plugins, printer_link, printer_profiles, projects, security, setup, skills, slicer, voice as voice_mod, wipe
 from . import memory as mem
-from .config import DATA, MEDIA, MODELS, SOUNDS, VERSION, load_settings, save_settings
+from . import models3d
+from .config import DATA, MEDIA, MODELS, ROOT, SOUNDS, VERSION, load_settings, save_settings
 from .hardware import free_disk_gb, hardware, rate
 from .jobs import STYLES, make_movie, movie_list, movies, renderer, resume_movies, stitch, stop_all, stop_movie
 from .laya import checkpoints as laya_checkpoints, laya
-from .plat import open_path
+from .plat import kill_leftovers, open_path
 from .llm import llm, small
 from .tor import tor
 from .voice import voice
@@ -89,6 +90,12 @@ def working_now() -> list[str]:
 
 @asynccontextmanager
 async def lifespan(_app):
+    try:  # engines left running by a run that didn't close normally (they hold ports + graphics memory)
+        left = await asyncio.to_thread(kill_leftovers, ROOT)
+        if left:
+            print("stopped leftover engines:", ", ".join(left))
+    except Exception as e:  # noqa: BLE001 — never blocks the start
+        print("leftover check failed:", e)
     db.init()
     mem.init_db()
     for f in MEDIA.glob("tts-*.wav"):  # leftovers of read-aloud answers (now deleted right after playing)
@@ -101,6 +108,11 @@ async def lifespan(_app):
         print("wipe failed:", e)
     renderer.before_run = _free_gpu
     loop = asyncio.get_running_loop()
+
+    def quiet(lp, ctx):  # the window dropping a connection is normal; Windows' event loop printed 15-line tracebacks
+        if not isinstance(ctx.get("exception"), (ConnectionResetError, ConnectionAbortedError, BrokenPipeError)):
+            lp.default_exception_handler(ctx)
+    loop.set_exception_handler(quiet)
     renderer.after_all = lambda: asyncio.run_coroutine_threadsafe(warm_chat(5), loop)
     renderer.start()  # only now (hooks set): importing the app never renders
     computer.MAIN_LOOP = loop
@@ -953,6 +965,8 @@ async def brains_laya_test():
 
 @app.get("/api/models/{modality}")
 def models_for(modality: str):
+    if modality == "3d":  # 3D AI models: kept for a stronger PC (the app can't run them yet)
+        return models3d.page()
     need(modality in models.MODALITIES, "Unknown model type", 404)
     s = load_settings()
     if modality == "voice":
@@ -1014,6 +1028,9 @@ class DownloadIn(BaseModel):
 @app.post("/api/models/download")
 def models_download(body: DownloadIn):
     try:
+        if body.modality == "3d":
+            need(body.repo, "Pick a model")
+            return models3d.download(body.repo, body.files or None)
         if body.catalog_id:
             c = next((c for c in models.CATALOG if c[0] == body.catalog_id), None)
             need(c, "Unknown model", 404)
@@ -1036,6 +1053,16 @@ def downloads():
 @app.delete("/api/downloads/{did}")
 def download_cancel(did: str):
     models.cancel_download(did)
+    return {"ok": True}
+
+
+@app.delete("/api/models3d")
+def model3d_delete(repo: str):
+    """A 3D AI model's whole folder (models/3d/<author>__<name>), a download still running is stopped first."""
+    try:
+        models3d.delete(repo)
+    except (ValueError, OSError) as e:
+        raise HTTPException(400, str(e))
     return {"ok": True}
 
 
@@ -1064,6 +1091,8 @@ def hf_search(q: str, modality: str = "text"):
             return models.voice_search(q)
         if modality == "transcription":
             return models.whisper_search(q)
+        if modality == "3d":
+            return models3d.search(q)
         return models.hf_search(q, modality)
     except Exception as e:  # noqa: BLE001 — offline, rate limited...
         raise HTTPException(502, f"Hugging Face search failed: {e}")
@@ -1496,6 +1525,29 @@ LAST_SEEN = {"t": time.time()}  # the page's last request (Linux in a normal bro
 def ping():
     """The page's heartbeat (every minute, also while hidden): the Linux starter keeps the app running while it comes."""
     return {"ok": True}
+
+
+LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
+
+
+def _host_of(value: str) -> str:
+    """'127.0.0.1:8770' / 'http://localhost:8770' / '[::1]:8770' -> the bare host name ('null' origins stay 'null')."""
+    return (urlparse(value if "//" in value else "//" + value).hostname or "").lower() if value else ""
+
+
+@app.middleware("http")
+async def only_this_pc(request, call_next):
+    """Websites open in the user's normal browser must not reach the app. (1) DNS rebinding: a site that makes its own
+    name point at 127.0.0.1 could read every chat and memory — tested: Host "evil.example:8770" got /api/memory.
+    (2) A site can send a POST without a body to 127.0.0.1 (stop-all, printer pause / cancel …) — browsers mark such
+    requests with Origin / Sec-Fetch-Site, the app window's own requests are same-origin."""
+    if _host_of(request.headers.get("host", "")) not in LOCAL_HOSTS:
+        return JSONResponse({"detail": "Only this PC can use Local AI."}, status_code=403)
+    if request.method not in ("GET", "HEAD", "OPTIONS"):
+        origin, site = request.headers.get("origin"), request.headers.get("sec-fetch-site")
+        if (origin and _host_of(origin) not in LOCAL_HOSTS) or (site and site not in ("same-origin", "none")):
+            return JSONResponse({"detail": "Only the Local AI window can do that."}, status_code=403)
+    return await call_next(request)
 
 
 @app.middleware("http")

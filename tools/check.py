@@ -135,6 +135,13 @@ for f in [*ROOT.glob("app/*.py"), *ROOT.glob("app/static/*.js"), *ROOT.glob("app
     if junk or "" in t or t.startswith("﻿"):
         print(f"GARBLED TEXT in {f.relative_to(ROOT)}: {len(junk)} spots{' + control chars' if chr(8) in t else ''}")
         bad += 1
+# the tool scripts must parse too: a line break inside a string (heredoc edit) broke make_github.py unnoticed
+for f in [*ROOT.glob("tools/*.py"), *ROOT.glob("tools/*/*.py"), *ROOT.glob("plugins/*/*.py"), *ROOT.glob("*.pyw")]:
+    try:
+        compile(f.read_text(encoding="utf-8", errors="replace"), str(f), "exec")
+    except SyntaxError as e:
+        print(f"SYNTAX ERROR in {f.relative_to(ROOT)} line {e.lineno}: {e.msg}")
+        bad += 1
 # the page's JavaScript must parse: ONE broken line in main.js (a line break inside a string) left the whole app blank
 import shutil as _sh
 import subprocess as _sp

@@ -278,6 +278,17 @@
    "size": 950058171,
    "dest": "engines/woosh/checkpoints",
    "kind": "file"
+  },
+  {
+   "id": "sdxl-turbo",
+   "title": "SDXL Turbo (makes pictures)",
+   "group": "pictures",
+   "os": "all",
+   "url": "https://huggingface.co/OlegSkutte/sdxl-turbo-GGUF/resolve/62a28b8b2c3cb4bf76d9aad45a5b798047dc786c/sd_xl_turbo_1.0.q8_0.gguf",
+   "sha256": "f5659e6cdad699b1432870cc9fe811359e45c8a331687be505d0ba05c8364720",
+   "size": 4098988672,
+   "dest": "models/OlegSkutte__sdxl-turbo-GGUF",
+   "kind": "file"
   }
  ]
 }

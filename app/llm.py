@@ -2,6 +2,7 @@
 renders) on the CPU so the two never fight over the iGPU's memory."""
 import asyncio
 import math
+import secrets
 import subprocess
 import threading
 from pathlib import Path
@@ -9,8 +10,13 @@ from pathlib import Path
 import httpx
 
 from .config import ENGINES, LLM_PORT, LOGS, MODELS, NO_WINDOW
-from .plat import exe, lib_env
+from .plat import exe, lib_env, spawn
 from .models import projector_for
+
+# The app's llama-servers answer only requests that carry this key (new every run). They allow EVERY website
+# (CORS reflects any Origin - tested), so without it any page open in the user's browser could use the models.
+ENGINE_KEY = secrets.token_urlsafe(24)
+AUTH = {"Authorization": f"Bearer {ENGINE_KEY}"}
 
 
 class LLM:
@@ -36,7 +42,8 @@ class LLM:
             proj = projector_for(Path(model))
             args = [str(exe(ENGINES / "llama", "llama-server")), "-m", model, "--host", "127.0.0.1",
                     "--port", str(LLM_PORT), "-c", str(ctx), "--jinja",
-                    "--cache-ram", "1024"]  # saved conversations in RAM: 1 GB, not the default 8 GB (16 GB PC)
+                    "--cache-ram", "1024",  # saved conversations in RAM: 1 GB, not the default 8 GB (16 GB PC)
+                    "--api-key", ENGINE_KEY]
             if proj:
                 args += ["--mmproj", str(proj)]
                 if "qwen" in Path(model).name.lower() and "vl" in Path(model).name.lower():
@@ -49,10 +56,10 @@ class LLM:
             args += ["-fa", "on", "-ctk", "q8_0", "-ctv", "q8_0", "-ub", "1024"]
             log = open(LOGS / "llm.log", "w", encoding="utf-8", errors="ignore")
             with self.plock:
-                proc = subprocess.Popen(args, stdout=log, stderr=subprocess.STDOUT, creationflags=NO_WINDOW,
+                proc = spawn(args, stdout=log, stderr=subprocess.STDOUT, creationflags=NO_WINDOW,
                                         env=lib_env(ENGINES / "llama"))
                 self.proc, self.model, self.gpu, self.vision = proc, model, gpu, bool(proj)
-            async with httpx.AsyncClient(timeout=2) as c:
+            async with httpx.AsyncClient(timeout=2, headers=AUTH) as c:
                 for _ in range(240):
                     if proc.poll() is not None:
                         if self.proc is not proc:
@@ -82,25 +89,33 @@ class LLM:
             except subprocess.TimeoutExpired:
                 proc.kill()
 
-    async def decide(self, prompt: str, labels: list[str]) -> dict[str, float]:
+    async def decide(self, prompt: str | tuple[str, str], labels: list[str]) -> dict[str, float]:
         return await decide_at(self.url, prompt, labels)
 
     async def complete(self, messages: list[dict], **extra) -> dict:
-        async with httpx.AsyncClient(timeout=900) as c:
+        async with httpx.AsyncClient(timeout=900, headers=AUTH) as c:
             r = await c.post(f"{self.url}/v1/chat/completions", json={"messages": messages, **extra})
             r.raise_for_status()
             return r.json()["choices"][0]["message"]
 
 
-async def decide_at(url: str, prompt: str, labels: list[str]) -> dict[str, float]:
+async def decide_at(url: str, prompt: str | tuple[str, str], labels: list[str]) -> dict[str, float]:
     """Decision mode: the model answers with ONE of the labels, decided in one step (~0.3 s instead of ~3.5 s for a
     written answer), and says how sure it is of each label. Words ("draw", "film"…) instead of letters: small models
-    choose letters with a strong bias. Keep the start of the prompt the same between calls (it's cached)."""
-    async with httpx.AsyncClient(timeout=120) as c:
-        r = await c.post(f"{url}/v1/chat/completions", json={
-            "messages": [{"role": "user", "content": prompt}], "temperature": 0, "max_tokens": 1,
-            "chat_template_kwargs": {"enable_thinking": False}, "logprobs": True, "top_logprobs": 20,
-            "grammar": "root ::= " + " | ".join(f'"{x}"' for x in labels)})
+    choose letters with a strong bias. prompt = text, or (the fixed instructions, the new part): the fixed part goes in
+    its own message so the engine keeps it — hybrid models (Qwen 3.5, Bonsai) only re-use what lies before the LAST user
+    message: as one message the 700-token routing question was read again every time (10 s on Bonsai 27B)."""
+    one = [{"role": "user", "content": "".join(prompt) if isinstance(prompt, tuple) else prompt}]
+    tries = ([{"role": "system", "content": prompt[0]}, {"role": "user", "content": prompt[1]}], one) \
+        if isinstance(prompt, tuple) else (one,)
+    async with httpx.AsyncClient(timeout=120, headers=AUTH) as c:
+        for msgs in tries:  # a template without a system role (Gemma) -> one message
+            r = await c.post(f"{url}/v1/chat/completions", json={
+                "messages": msgs, "temperature": 0, "max_tokens": 1,
+                "chat_template_kwargs": {"enable_thinking": False}, "logprobs": True, "top_logprobs": 20,
+                "grammar": "root ::= " + " | ".join(f'"{x}"' for x in labels)})
+            if r.status_code < 400:
+                break
         r.raise_for_status()
         top = r.json()["choices"][0]["logprobs"]["content"][0]["top_logprobs"]
     out = dict.fromkeys(labels, 0.0)
@@ -147,12 +162,12 @@ class SmallModel:
             import os
             args = [str(exe(ENGINES / "llama", "llama-server")), "-m", str(m), "--host", "127.0.0.1", "--port",
                     str(self.PORT), "-c", "4096", "--jinja", "-ngl", "0", "--device", "none", "-np", "1",
-                    "-t", str(max(2, (os.cpu_count() or 8) // 2)), "--cache-ram", "128"]
+                    "-t", str(max(2, (os.cpu_count() or 8) // 2)), "--cache-ram", "128", "--api-key", ENGINE_KEY]
             log = open(LOGS / "small.log", "w", encoding="utf-8", errors="ignore")
-            self.proc = subprocess.Popen(args, stdout=log, stderr=subprocess.STDOUT, creationflags=NO_WINDOW,
+            self.proc = spawn(args, stdout=log, stderr=subprocess.STDOUT, creationflags=NO_WINDOW,
                                         env=lib_env(ENGINES / "llama"))
             proc = self.proc
-            async with httpx.AsyncClient(timeout=2) as c:
+            async with httpx.AsyncClient(timeout=2, headers=AUTH) as c:
                 for _ in range(60):
                     if self.proc is not proc or proc.poll() is not None:  # it ended, or Stop was pressed meanwhile
                         return False
@@ -168,7 +183,7 @@ class SmallModel:
         """A written answer from the small model (e.g. a 3D design recipe in Create › 3D)."""
         if not await self.ensure():
             raise httpx.HTTPError("The small model isn't available")
-        async with httpx.AsyncClient(timeout=300) as c:
+        async with httpx.AsyncClient(timeout=300, headers=AUTH) as c:
             r = await c.post(f"{self.url}/v1/chat/completions", json={"messages": messages, **extra})
             r.raise_for_status()
             return r.json()["choices"][0]["message"]
