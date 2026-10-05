@@ -17,11 +17,28 @@ you type, say or make leaves your computer.
 - **Pictures and videos** with stable-diffusion.cpp, and **long videos / movies** joined from clips, with narration and
   sound effects (Sony's Woosh model, optional).
 - **3D design that works**: tested ready-made devices (robot arm sized for its load, robotic hand, foam-dart blasters,
-  fidget spinner, pump, gears, drone frame, boxes with lids…), designs built part by part with a fit check (no parts may collide), an
+  fidget spinner, a door / gate **slide latch with a padlock hasp**, pump, gears, drone frame, boxes with lids…), designs
+  built part by part with a fit check (no parts may collide, and the fixer re-checks until nothing touches), an
   editor to change them by hand (move, stretch, holes, threads, **mirror**, Ctrl+click to select several parts),
   **cut to fit** your printer's plate, and **G-code for your printer** with OrcaSlicer — all offline.
 - **Engineering calculators** the AI uses by itself: mechanics, fluids, electronics / PCB, airgun energy and
   trajectory, a robot-arm tool (inverse kinematics, servo choice), a parts inventory.
+- **Apps** (Create › Apps): describe an app, game or tool — the AI writes it, reads the code (missing element ids, open
+  tags), opens and **uses it in a hidden browser** (draws, presses every button, types keys), **looks at a screenshot**
+  of it, and fixes what's wrong; tested starting points (paint, notepad, solitaire, games). It runs sealed (no internet,
+  no access to your files) and can be saved as a project folder on your Desktop.
+- **Forge** (Create › Forge): new skills the AI writes for itself (e.g. "a skill that shows my CPU and RAM use"), checked
+  (pyflakes + sandbox rules) and self-tested in a locked sandbox (no files, no internet, no programs, 512 MB). Each one
+  stays a **draft until you try it and turn it on**; every version is kept, so you can always go back.
+- **Agent team** (Team, off by default): a planner gives each expert (researcher, engineer, 3D designer, coder, writer)
+  one step, an independent judge checks every step, a reviewer writes the result — all in a chat. Jobs queue up.
+- **Computer use** in the app's **own browser** (tabs, optional Tor — your desktop isn't touched) or on your screen
+  (the app shrinks to a corner panel; you approve every step in the chat). **Background tasks**: apps, skills, team jobs,
+  3D builds and pictures keep working while you chat, with a notice when each is ready.
+- **📐 Geometric reasoning** (Memory › Reasoning, off by default): for questions with sizes, angles, counts, dates or
+  logic, the AI writes the problem as a small program, runs it in the sandbox, re-runs it with changed numbers (a
+  "perturbation test") and answers from the result; the small Laya model decides when it's needed, and follow-ups ("and
+  with a 3 mm gap?") just change the numbers in the same program.
 - **Bigger models**: the Models page downloads any GGUF model from Hugging Face and shows what each can do (tools,
   vision, video, thinking) before you pick it. Its **3D** tab finds and downloads picture-to-3D AI models (TRELLIS,
   TripoSG, PartCrafter, Hunyuan3D…) to keep for a stronger PC — most need an NVIDIA card.

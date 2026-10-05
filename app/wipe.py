@@ -136,7 +136,8 @@ def sweep(job_ids: set[str]) -> dict:
     for d in (DATA / "attachments").glob("*"):
         if d.is_dir() and d.name not in att_used and time.time() - d.stat().st_mtime > 6 * 3600:
             n += shred_tree(d) or 1
-    old_runs = [d for d in (DATA / "plugin-runs").glob("*") if d.is_dir() and time.time() - d.stat().st_mtime > 6 * 3600]
+    old_runs = [d for runs in ("plugin-runs", "forge-runs") for d in (DATA / runs).glob("*")  # (+ the Forge's sandbox runs)
+                if d.is_dir() and time.time() - d.stat().st_mtime > 6 * 3600]
     for d in [*DATA.glob("sfx-*"), *old_runs]:  # work folders of the sound-effects step / 3D runs (a crash or a restart
         if d.is_dir():  # mid-way: two 3D runs had left 124 MB of parts and their request behind)
             shred_tree(d)
@@ -148,7 +149,7 @@ def sweep(job_ids: set[str]) -> dict:
         db.q("VACUUM")  # free space from before secure delete was on
     checkpoint()
     for top, dirs, files in os.walk(DATA):
-        dirs[:] = [d for d in dirs if d != "window"]  # the window's own browser files: many, and not ours
+        dirs[:] = [d for d in dirs if d not in ("window", "browser")]  # the browsers' own files: many, and not ours
         _no_index(Path(top))
         for f in files:
             _no_index(Path(top) / f)

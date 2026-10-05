@@ -39,6 +39,8 @@ DEFAULTS = {
     "memory_auto": True,                    # learn lasting facts about the user from chats (Memory page)
     "laya": True,
     "laya_assist": False,
+    "team_on": False,                       # the agent team (Team page): off until there's computing power for it
+    "geo_reasoning": False,                 # Memory › Reasoning: questions with numbers / shapes / logic are COMPUTED
     "laya_only": False,
     "small_model": None,                    # the small model's file (Models page); None = models/small/Qwen3-1.7B
     "laya_model": None,                     # the Laya checkpoint folder (models/laya-real/<name>); None = typed-decisions

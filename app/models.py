@@ -654,6 +654,27 @@ def recommend(groups: list[dict]) -> tuple[dict | None, dict | None]:
     return rec, proj
 
 
+def not_gguf(query: str) -> list[dict]:
+    """Models that match but exist only in another format (safetensors, PyTorch): this app runs GGUF files (llama.cpp /
+    stable-diffusion.cpp), so they're listed greyed out with the reason — they appear normally once someone publishes
+    a GGUF version."""
+    def fetch():
+        r = httpx.get(f"{HF}/api/models", params=[("search", query), ("sort", "downloads"), ("limit", "5"),
+                                                   ("expand[]", "downloads"), ("expand[]", "pipeline_tag")], timeout=30)
+        r.raise_for_status()
+        return r.json()
+    try:
+        found = _cached(f"nogguf:{query.lower()}", 300, fetch)
+    except (httpx.HTTPError, ValueError):
+        return []
+    return [{"repo": m["id"], "author": m["id"].split("/")[0], "name": m["id"].split("/")[-1],
+             "downloads": m.get("downloads", 0), "likes": 0, "updated": "", "params": None, "arch": m.get("pipeline_tag"),
+             "verdict": "no", "vision": False, "rec": None, "proj": None, "total": 0, "fit": "no",
+             "why": "No GGUF file", "present": False, "active": False, "path": None, "download": None,
+             "reason": "Only published in a format this app can't run (no GGUF file yet — the app runs GGUF models). It "
+                       "will show up here once someone converts it to GGUF."} for m in found]
+
+
 def hf_search(query: str, modality: str) -> list[dict]:
     def fetch():  # what Hugging Face says is cached for a few minutes...
         params = [("search", query), ("filter", "gguf"), ("sort", "downloads"), ("limit", "12")]
@@ -667,6 +688,8 @@ def hf_search(query: str, modality: str) -> list[dict]:
             trees = list(pool.map(lambda m: _safe_tree(m["id"]), found))
         return list(zip(found, trees))
     raw = _cached(f"search:{modality}:{query.lower()}", 300, fetch)
+    if not raw:  # nothing as GGUF: say what exists and why it can't be used ("GeoWeave-8B" showed nothing at all)
+        return not_gguf(query)
     active = Path(active_path(modality) or "").name.lower()
     on_pc = {Path(x["path"]).name.lower(): x["path"] for x in scan()}
     out = []

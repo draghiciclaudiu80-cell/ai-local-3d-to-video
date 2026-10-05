@@ -17,7 +17,7 @@ from urllib.parse import urlparse
 import httpx
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 from pydantic import BaseModel
@@ -25,6 +25,9 @@ from pydantic import BaseModel
 from . import agent, attach, awake, computer, db, feedback, models, paper, plugins, printer_link, printer_profiles, projects, security, setup, skills, slicer, voice as voice_mod, wipe
 from . import memory as mem
 from . import models3d
+from . import apps, forge, tasks, team
+from . import browser as browser_mod
+from .browser import browser
 from .config import DATA, MEDIA, MODELS, ROOT, SOUNDS, VERSION, load_settings, save_settings
 from .hardware import free_disk_gb, hardware, rate
 from .jobs import STYLES, make_movie, movie_list, movies, renderer, resume_movies, stitch, stop_all, stop_movie
@@ -83,6 +86,14 @@ def working_now() -> list[str]:
         why.append("downloading a model")
     if computer.active():
         why.append("using the computer for you")
+    if apps.MAKING:
+        why.append("making an app")
+    if forge.MAKING:
+        why.append("making a new skill")
+    if any(j["status"] == "running" for j in tasks.JOBS.values()):
+        why.append("working in the background")
+    if team.RUNNING:
+        why.append("the agent team is working")
     if printer_link.active():
         why.append("printing on the 3D printer")  # a USB print stops if the PC sleeps
     return why
@@ -119,6 +130,7 @@ async def lifespan(_app):
     mem.background(mem.idle_loop())
     mem.background(warm_chat(3))
     resume_movies()
+    team.init()  # jobs cut off by a restart are marked stopped; daily jobs keep their clock
     models.resume_downloads()
     if tor.wanted():
         threading.Thread(target=tor.start, daemon=True).start()  # connected by the time you search
@@ -127,6 +139,7 @@ async def lifespan(_app):
         mem.background(laya.ensure())  # ready for the first decision
     awake.start(working_now)  # the Legion Go slept after 3 idle minutes and froze a Blender job halfway
     yield
+    await browser.stop()
     awake.stop()
     tor.stop()
     llm.stop()
@@ -1205,8 +1218,14 @@ def movie_stop(mid: str):
 
 
 @app.post("/api/stop-all")
-def stop_everything():
-    return {"stopped": stop_all(), "stopped_3d": plugins.stop_all()}
+async def stop_everything():
+    """Everything that's being made or done — computer use too (it wasn't stopped: "Stop doesn't stop it")."""
+    for t in [*apps.MAKING.values(), *forge.MAKING.values(),  # asyncio tasks: cancelled here, in the server's loop
+              *(j["task"] for j in list(tasks.JOBS.values()) if j.get("task"))]:  # (+ apps / skills in the background)
+        t.cancel()
+    n_team, n_computer = team.stop_all(), computer.stop_all()
+    stopped, stopped_3d = await asyncio.to_thread(lambda: (stop_all(), plugins.stop_all()))  # these kill processes
+    return {"stopped": stopped, "stopped_3d": stopped_3d, "stopped_computer": n_computer, "stopped_team": n_team}
 
 
 @app.get("/api/styles")
@@ -1336,9 +1355,305 @@ async def stt(file: UploadFile = File(...)):
 @app.post("/api/computer/start")
 def computer_start(body: dict):
     try:
-        return computer.start(body.get("task", "")).public()
+        return computer.start(body.get("task", ""), body.get("target", "desktop")).public()
     except RuntimeError as e:
         raise HTTPException(400, str(e))
+
+
+# ---------------------------------------------------------------- the app maker (Apps page)
+def _sealed(a: dict) -> dict:
+    return {**a, "sealed": apps.sealed(a["html"])}
+
+
+@app.get("/api/apps")
+def apps_list():
+    return {"apps": apps.listing(), "making": list(apps.MAKING)}
+
+
+@app.get("/api/apps/{aid}")
+def app_get(aid: str):
+    try:
+        return _sealed(apps.get(aid))
+    except (OSError, ValueError):
+        raise HTTPException(404, "App not found")
+
+
+@app.post("/api/apps")
+async def app_make(body: dict):
+    """A new app from the words, or (id) a changed version. Takes ~1-5 minutes; POST /api/apps/stop cancels it."""
+    prompt = str(body.get("prompt") or "").strip()
+    need(prompt, "Describe the app or the change")
+    key = body.get("id") or "new"
+    need(key not in apps.MAKING, "That app is being made already")
+    task = asyncio.ensure_future(apps.make(prompt, body.get("id")))
+    apps.MAKING[key] = task
+    try:
+        return _sealed(await task)
+    except asyncio.CancelledError:
+        raise HTTPException(400, "Stopped")
+    except (RuntimeError, OSError, ValueError, httpx.HTTPError) as e:
+        raise HTTPException(400, str(e)[:300])
+    finally:
+        apps.MAKING.pop(key, None)
+
+
+@app.post("/api/apps/stop")
+async def apps_stop():
+    for t in list(apps.MAKING.values()):
+        t.cancel()
+    return {"ok": True}
+
+
+@app.post("/api/apps/{aid}/{what}")
+def app_action(aid: str, what: str, body: dict | None = None):
+    try:
+        if what == "undo":
+            return _sealed(apps.undo(aid))
+        if what == "rename":
+            apps.rename(aid, str((body or {}).get("name") or ""))
+            return {"ok": True}
+        if what == "export":  # a real project folder on the Desktop / in Documents (new or empty folders only)
+            b = body or {}
+            return {"folder": apps.export(aid, str(b.get("name") or ""), "documents" if b.get("where") == "documents" else "desktop")}
+        if what == "open-folder":  # only a folder this app itself saved
+            exports = apps.get(aid).get("exports") or []
+            need(exports and Path(exports[-1]).is_dir(), "This app hasn't been saved to a folder yet")
+            open_path(exports[-1])
+            return {"ok": True}
+    except (RuntimeError, OSError, ValueError) as e:
+        raise HTTPException(400, str(e))
+    raise HTTPException(404, "Unknown action")
+
+
+@app.delete("/api/apps/{aid}")
+def app_delete(aid: str):
+    apps.delete(aid)
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------- background tasks (one panel for all long work)
+@app.get("/api/tasks")
+def tasks_list():
+    return {"tasks": tasks.listing()}
+
+
+@app.post("/api/tasks/{tid}/stop")
+def task_stop(tid: str):
+    return {"ok": tasks.stop(tid)}
+
+
+def app_done(a: dict) -> dict:
+    """An app made in the background: the notice / Open target, and (for a chat) the message with its card."""
+    return {"note": a.get("receipt", ""), "open": {"page": "apps", "app": a["id"]},
+            "text": f"\U0001f4bb **{a['name']}** is ready — {a.get('receipt', '')}. {a.get('note') or ''}",
+            "extra": {"apps": [{"kind": "app", "id": a["id"], "label": a["name"], "ok": a.get("checked_ok")}]}}
+
+
+def skill_done(k: dict) -> dict:
+    ok = bool(k["tests"].get(str(k["versions"])))
+    return {"note": k.get("receipt", ""), "open": {"page": "forge", "skill": k["id"]},
+            "text": f"\U0001f6e0 Skill **{k['name']}** (version {k['versions']}) — it {k.get('receipt', '')}."
+                    + (" A draft: try it, then Turn on." if ok else ""),
+            "extra": {"forge": {"id": k["id"], "name": k["name"], "ok": ok, "version": k["versions"]}}}
+
+
+@app.post("/api/apps/jobs")
+async def app_job(body: dict):
+    """The Apps page's Make / Change, in the background: answers at once; Background tasks shows it till it's ready."""
+    prompt = str(body.get("prompt") or "").strip()
+    need(prompt, "Describe the app or the change")
+    aid = body.get("id") or None
+    title = (f"Changing “{apps.get(aid)['name']}”" if aid else f"New app: {prompt[:60]}")
+    return tasks.start("app", title, apps.make(prompt, aid), done=app_done)
+
+
+@app.post("/api/forge/jobs")
+async def forge_job(body: dict):
+    prompt = str(body.get("prompt") or "").strip()
+    need(prompt, "Describe the skill or the change")
+    sid = body.get("id") or None
+    title = (f"Changing the skill “{forge.get(sid)['name']}”" if sid else f"New skill: {prompt[:60]}")
+    return tasks.start("skill", title, forge.make(prompt, sid), done=skill_done)
+
+
+# ---------------------------------------------------------------- the Forge: new skills the AI writes (sandboxed drafts)
+@app.get("/api/forge")
+def forge_list():
+    return {"skills": forge.listing(), "making": list(forge.MAKING)}
+
+
+@app.get("/api/forge/{sid}")
+def forge_get(sid: str):
+    try:
+        return forge.get(sid)
+    except (OSError, ValueError):
+        raise HTTPException(404, "Skill not found")
+
+
+@app.post("/api/forge")
+async def forge_make(body: dict):
+    """A new skill from the words, or (id) a changed version — a draft, tested in the sandbox. ~1-3 minutes."""
+    prompt = str(body.get("prompt") or "").strip()
+    need(prompt, "Describe the skill or the change")
+    key = body.get("id") or "new"
+    need(key not in forge.MAKING, "That skill is being made already")
+    task = asyncio.ensure_future(forge.make(prompt, body.get("id")))
+    forge.MAKING[key] = task
+    try:
+        return await task
+    except asyncio.CancelledError:
+        raise HTTPException(400, "Stopped")
+    except (RuntimeError, OSError, ValueError, httpx.HTTPError) as e:
+        raise HTTPException(400, str(e)[:300])
+    finally:
+        forge.MAKING.pop(key, None)
+
+
+@app.post("/api/forge/stop")
+async def forge_stop():
+    for t in list(forge.MAKING.values()):
+        t.cancel()
+    return {"ok": True}
+
+
+@app.post("/api/forge/{sid}/{what}")
+async def forge_action(sid: str, what: str, body: dict | None = None):
+    b = body or {}
+    try:
+        if what == "run":  # the draft (or a chosen version), in the sandbox
+            return await asyncio.to_thread(forge.run, sid, b.get("params") or {}, b.get("version"))
+        if what == "on":
+            return forge.turn_on(sid, b.get("version"))
+        if what == "off":
+            return forge.turn_off(sid)
+        if what == "undo":
+            return forge.undo(sid)
+    except (OSError, ValueError) as e:
+        raise HTTPException(404, f"Skill not found ({e})"[:200])
+    except RuntimeError as e:
+        raise HTTPException(400, str(e))
+    raise HTTPException(404, "Unknown action")
+
+
+@app.delete("/api/forge/{sid}")
+def forge_delete(sid: str):
+    forge.delete(sid)
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------- the agent team (Team page, off by default)
+@app.get("/api/team")
+def team_state():
+    return team.public()
+
+
+@app.post("/api/team/toggle")
+async def team_toggle(body: dict):
+    on = bool(body.get("on"))
+    save_settings({"team_on": on})
+    if not on:
+        team.stop_all()
+    return team.public()
+
+
+@app.post("/api/team/agents")
+def team_agents(body: dict):
+    return {"agents": team.save_agents(body.get("agents") or [])}
+
+
+@app.post("/api/team/jobs")
+async def team_job(body: dict):  # in the loop: the job is an asyncio task
+    goal = str(body.get("goal") or "").strip()
+    need(goal, "Describe the job")
+    try:
+        return team.start(goal, str(body.get("daily") or ""))
+    except RuntimeError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.post("/api/team/jobs/{jid}/stop")
+async def team_job_stop(jid: str):
+    team.stop(jid)
+    return {"ok": True}
+
+
+@app.delete("/api/team/jobs/{jid}")
+async def team_job_delete(jid: str):
+    team.delete(jid)
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------- the app's own browser (Computer use › Browser)
+async def _browser(fn, *a):
+    try:
+        return await fn(*a)
+    except Exception as e:  # noqa: BLE001 — shown in the browser bar
+        raise HTTPException(400, f"Browser: {e}")
+
+
+@app.get("/api/browser")
+async def browser_state():
+    return {"running": browser.running(), "tor": browser.tor, "tabs": await _browser(browser.tabs)}
+
+
+@app.post("/api/browser/open")
+async def browser_open(body: dict):
+    """Starts the browser if needed (tor: true / false switches it), then goes to the address / search words."""
+    await _browser(browser.ensure, body.get("tor"))
+    if body.get("new_tab"):
+        await _browser(browser.new_tab, browser_mod.as_url(body.get("url") or ""))
+    elif body.get("url") is not None:
+        await _browser(browser.go, body.get("url") or "")
+    return {"ok": True, "tabs": await _browser(browser.tabs), "tor": browser.tor}
+
+
+@app.post("/api/browser/tab/{tid}/{what}")
+async def browser_tab(tid: str, what: str):
+    need(what in ("show", "close"), "Unknown tab action")
+    if what == "show":
+        browser.active = tid
+    else:
+        await _browser(browser.close_tab, tid)
+    return {"tabs": await _browser(browser.tabs)}
+
+
+@app.post("/api/browser/nav/{what}")
+async def browser_nav(what: str):
+    need(what in ("back", "forward", "reload"), "Unknown action")
+    await _browser(browser.reload) if what == "reload" else await _browser(browser.history, -1 if what == "back" else 1)
+    return {"ok": True}
+
+
+@app.get("/api/browser/shot")
+async def browser_shot():
+    """The shown tab as a picture (the page asks again and again while it's visible)."""
+    need(browser.running() and browser.active, "The browser isn't open", 404)
+    return Response(await _browser(browser.shot, 60), media_type="image/jpeg", headers={"Cache-Control": "no-store"})
+
+
+@app.post("/api/browser/input")
+async def browser_input(body: dict):
+    """Your mouse and keyboard on the shown tab: click / scroll at x, y (0-1 of the picture), text, key."""
+    kind = body.get("type")
+    x, y = float(body.get("x") or 0), float(body.get("y") or 0)
+    if kind == "click":
+        await _browser(browser.click, x, y, "right" if body.get("button") == "right" else "left", int(body.get("count") or 1))
+    elif kind == "scroll":
+        await _browser(browser.scroll, x, y, float(body.get("dy") or 0))
+    elif kind == "text":
+        await _browser(browser.type_text, str(body.get("text") or "")[:2000])
+    elif kind == "key":
+        await _browser(browser.key, str(body.get("key") or ""))
+    else:
+        need(False, "Unknown input")
+    return {"ok": True}
+
+
+@app.post("/api/browser/{what}")
+async def browser_power(what: str):
+    need(what in ("stop", "clear"), "Unknown action")
+    await (browser.clear() if what == "clear" else browser.stop())
+    return {"ok": True}
 
 
 @app.get("/api/computer/tasks")

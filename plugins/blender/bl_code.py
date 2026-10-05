@@ -542,7 +542,9 @@ def _zr(ob):
     return min(zs), max(zs)
 
 
-def fix_fit(bodies, clashes):
+def fix_fit(bodies, clashes, cut_only=False):
+    """cut_only: a later round only cuts gaps — a lift can push a part into a third one (a lock's key lifted off its
+    pin went into the box), and lifting again could go on forever."""
     done = []
     for c in clashes:
         a = next((b for b in bodies if b["name"] == c["a"]), None)
@@ -551,6 +553,8 @@ def fix_fit(bodies, clashes):
             continue  # already merged away
         la, lb = LIFTS.search(a["name"]), LIFTS.search(b["name"])
         aa, ab = ATTACHED.search(a["name"]) and not la, ATTACHED.search(b["name"]) and not lb
+        if cut_only:
+            la = lb = aa = ab = None
         if (aa or ab) and not (a["reference"] or b["reference"]):  # a handle belongs to its pot: one piece
             keep, extra = (b, a) if aa and not ab else (a, b) if ab and not aa else sorted((a, b), key=lambda x: -x["volume"])
             m = keep["obj"].modifiers.new("merge", "BOOLEAN")
@@ -573,7 +577,7 @@ def fix_fit(bodies, clashes):
         up_b, lo_b = (a, b) if za[0] + za[1] > zb[0] + zb[1] else (b, a)  # one — and all that sits above it — until clear
         zu, zl = _zr(up_b["obj"]), _zr(lo_b["obj"])
         pen = zl[1] - zu[0]
-        if 0 < pen <= 0.35 * (zu[1] - zu[0]) and not up_b["reference"]:
+        if not cut_only and 0 < pen <= 0.35 * (zu[1] - zu[0]) and not up_b["reference"]:
             mid = (zu[0] + zu[1]) / 2
             for x in bodies:
                 if x is up_b or (x is not lo_b and sum(_zr(x["obj"])) / 2 >= mid):
@@ -603,9 +607,11 @@ def fix_fit(bodies, clashes):
 say(f"PROGRESS: fit {len(bodies)}")
 boxes, trees, clashes = fit(bodies)
 raw_clashes, fixed = clashes, []
-if clashes and job.get("fix_fit", True):
+for rnd in range(3) if job.get("fix_fit", True) else ():  # fixed, checked again, until nothing touches
+    if not clashes:
+        break
     say("PROGRESS: fit fixing the collisions")
-    fixed = fix_fit(bodies, clashes)
+    fixed += fix_fit(bodies, clashes, cut_only=rnd > 0)
     boxes, trees, clashes = fit(bodies)  # tested again: what's delivered is what was checked
 out_bodies = []
 for k, b in enumerate(bodies):
@@ -676,7 +682,7 @@ except Exception as e:  # noqa: BLE001
     say(f"render failed: {e}")
     render = None
 result = {"name": job.get("name") or "model", "bodies": out_bodies, "collisions": clashes,
-          "raw_collisions": raw_clashes, "fit_fixed": fixed,
+          "raw_collisions": raw_clashes, "fit_fixed": list(dict.fromkeys(fixed)),
           "checked_pairs": len(bodies) * (len(bodies) - 1) // 2,
           "engine": f"Blender {bpy.app.version_string} ({str(job.get('engine_label') or 'AI code')[:60]})",
           "printed": printed.getvalue()[-1500:]}

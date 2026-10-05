@@ -38,10 +38,11 @@ export function button(text, cls, onClick) {
 const loaders = {};
 export let current = "chat";
 export function onPage(name, fn) { loaders[name] = fn; }
+const NAV_OF = { apps: "create", forge: "create" };  // Apps and Forge are tabs of Create (their own pages, Create's tab bar)
 export function show(name) {
   current = name;
   store.set("page", name);
-  document.querySelectorAll("#nav button, #settingsBtn").forEach(b => b.classList.toggle("on", b.dataset.p === name));
+  document.querySelectorAll("#nav button, #settingsBtn").forEach(b => b.classList.toggle("on", b.dataset.p === (NAV_OF[name] || name)));
   document.querySelectorAll(".page").forEach(p => p.classList.toggle("on", p.id === "p-" + name));
   loaders[name]?.();
 }

@@ -1396,7 +1396,71 @@ def fidget_spinner(o: dict) -> dict:
                       + f" About {span:.0f} mm across.")}
 
 
-TEMPLATES = {"dart_blaster": dart_blaster, "revolver_blaster": revolver_blaster, "centrifugal_pump": centrifugal_pump, "gear_pair": gear_pair, "box_with_lid": box_with_lid,
+def slide_latch(o: dict) -> dict:
+    """A door / gate SLIDE LATCH (barrel bolt) with a PADLOCK hasp: a base plate for the door with two guide loops, a round
+    bolt with a handle that slides in them, a keeper for the frame that the bolt slides into, and two tabs — one on the
+    bolt, one standing on the plate — whose holes line up when it's closed: a padlock through both locks it (the plate's
+    tab is also the stop). Countersunk 4 mm screws. 0.4 mm around everything that slides. Modelled CLOSED; open = the
+    bolt slid back by `throw` (clear of the keeper, still held by both loops)."""
+    d = _o(o, "bolt_diameter", 10, 6, 16)
+    gl = max(10.0, d)                                   # guide loop length (x)
+    throw = _o(o, "throw", 22, 15, 20 + gl)             # how far the bolt moves, open <-> closed
+    shackle = _o(o, "shackle_diameter", 7, 4, 10)       # the padlock's shackle
+    gap_frame = _o(o, "frame_gap", 4, 0, 20)            # door edge to frame
+    r, g, t, wall, tw = d / 2, 0.4, 4.0, 3.0, 3.0
+    W = max(40.0, 4 * r + 24)                           # plate width (y)
+    G = r + g + wall                                    # half width of a loop
+    zc = t + g + r                                      # bolt axis height: it never rubs on the plate
+    top = zc + r + g + wall                             # loop top
+    hr = max(3.5, r * 0.75)                             # handle radius
+    x1 = 6.0                                            # loop 1 starts
+    xh = x1 + gl + 2 + hr + g + throw + tw              # the handle when CLOSED (open, it still clears loop 1)
+    x2 = xh + hr + g + 2 + tw + g + tw                  # loop 2 starts (after the stop tab)
+    L = x2 + gl + 14                                    # plate length (room for the end screws)
+    xk = L + gap_frame                                  # keeper plate starts (on the frame)
+    kl = gl + 4                                         # keeper loop length
+    xe, xs = xk + kl, x1 + 2                            # bolt end (inside the keeper loop) / start (inside loop 1)
+    sh_r = shackle / 2 + 0.3                            # padlock hole radius
+    zt0, zt1 = zc + r + 1, zc + r + 1 + max(12.0, shackle + 7)  # the tabs' height
+    yin = max(r, hr) + g + 1                            # the plate's tab starts here (clear of the bolt + handle)
+    ys, zs = (yin + W / 2) / 2 + 0.5, (zt0 + zt1) / 2  # the padlock hole's centre (y, z)
+    cyl = lambda rad, h, c, rot=None, op="add": {"op": op, "shape": "cylinder", "radius": rad, "height": h, "center": list(c),
+                                                 **({"rotate": rot} if rot else {})}
+    box = lambda x0, x1_, y0, y1, z0, z1, op="add": {"op": op, "shape": "box", "size": [x1_ - x0, y1 - y0, z1 - z0],
+                                                     "center": [(x0 + x1_) / 2, (y0 + y1) / 2, (z0 + z1) / 2]}
+
+    def screw(x, y):  # a countersunk 4 mm screw hole through a plate
+        return [cyl(2.3, t + 2, (x, y, -1), op="subtract"),
+                {"op": "subtract", "shape": "cone", "radius": 2.3, "radius2": 4.6, "height": 2.31, "center": [x, y, t - 2.3]}]
+
+    def loop(xa, length):  # a guide loop: a block with the bolt's hole (0.4 mm all round)
+        return [box(xa, xa + length, -G, G, t - 0.5, top), cyl(r + g, length + 2, (xa - 1, 0, zc), ALONG_X, "subtract")]
+    plate = [box(0, L, -W / 2, W / 2, 0, t)] + loop(x1, gl) + loop(x2, gl)
+    plate += [box(xh + tw / 2 + g, xh + tw / 2 + g + tw, yin, W / 2, t - 0.5, zt1),          # the stop tab with the
+              cyl(sh_r, tw + 2, (xh + tw / 2 + g - 1, ys, zs), ALONG_X, "subtract")]           # padlock hole
+    for x in (x1 + gl / 2, L - 7):
+        for y in (-(W / 2 - 6), W / 2 - 6):
+            plate += screw(x, y)
+    hh = r + 1 + max(12.0, shackle + 7) + 5             # handle height above the bolt axis
+    bolt = [cyl(r, xe - xs, (xs, 0, zc), ALONG_X),                                         # the bolt
+            cyl(hr, hh, (xh, 0, zc)),                                                       # the handle
+            {"op": "add", "shape": "sphere", "radius": hr + 1.5, "center": [xh, 0, zc + hh]},  # its knob
+            box(xh - tw / 2, xh + tw / 2, hr * 0.5, W / 2 - 1, zt0, zt1),                   # the bolt's tab
+            cyl(sh_r, tw + 2, (xh - tw / 2 - 1, ys, zs), ALONG_X, "subtract")]               # its padlock hole
+    keeper = [box(xk, xk + kl + 18, -W / 2, W / 2, 0, t)] + loop(xk + 2, kl - 2)
+    keeper += screw(xk + kl + 11, -(W / 2 - 6)) + screw(xk + kl + 11, W / 2 - 6)
+    keeper += screw(xk + 2 + (kl - 2) / 2, -(W / 2 - 4.8)) + screw(xk + 2 + (kl - 2) / 2, W / 2 - 4.8)
+    return {"name": f"slide latch with padlock hasp, {d:g} mm bolt", "voxel": 0.2, "bodies": [
+                {"name": "base plate (door)", "parts": plate}, {"name": "bolt", "parts": bolt},
+                {"name": "keeper (frame)", "parts": keeper}],
+            "notes": (f"Print the base plate and the keeper flat (loops up), the bolt lying down with the handle up (use a "
+                      f"brim). Screw the plate on the door and the keeper on the frame with 4 mm countersunk screws (4 + 4), "
+                      f"lined up so the bolt slides into the keeper. It slides {throw:g} mm. To lock it, close it and put a "
+                      f"padlock with a shackle up to {shackle:g} mm through both tab holes. About {xk + kl + 18:.0f} mm long "
+                      "in all (plate + gap + keeper). PLA is fine for a cupboard or a small gate; PETG or ABS outdoors.")}
+
+
+TEMPLATES = {"slide_latch": slide_latch, "dart_blaster": dart_blaster, "revolver_blaster": revolver_blaster, "centrifugal_pump": centrifugal_pump, "gear_pair": gear_pair, "box_with_lid": box_with_lid,
              "handcuffs": handcuffs, "bolt_and_nut": bolt_and_nut, "threaded_jar": threaded_jar, "drum_magazine": drum_magazine,
              "robot_hand": robot_hand, "exo_elbow": exo_elbow, "drum_blaster": drum_blaster, "demo_engine": demo_engine,
              "fpv_drone": fpv_drone, "dart_magazine": dart_magazine, "mag_pistol": mag_pistol, "cap_grenade": cap_grenade,

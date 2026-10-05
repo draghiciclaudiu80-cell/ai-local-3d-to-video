@@ -20,7 +20,7 @@ their official sites; each keeps its own license (follow the links for the full 
 | [Laya](https://huggingface.co/convaiinnovations/laya) (Convai Innovations) | decides what you asked for | Apache-2.0 |
 | [Woosh](https://github.com/SonyResearch/Woosh) (Sony AI) — code, included with one small change (see engines/woosh/NOTICE-LocalAI.txt) | sound effects for videos (optional) | MIT / Apache-2.0 |
 | [PicoGK](https://github.com/leap71/PicoGK) (LEAP 71) — not downloaded by the online installer | 3D engine (optional, Windows) | Apache-2.0 |
-| Python packages (FastAPI, Uvicorn, httpx, faster-whisper, piper-tts, kokoro-onnx, onnxruntime, Pillow, PyAV, …) | the app | each package's own (MIT / BSD / Apache mostly) |
+| Python packages (FastAPI, Uvicorn, httpx, faster-whisper, piper-tts, kokoro-onnx, onnxruntime, Pillow, PyAV, pyflakes, …) | the app (pyflakes: checks the code the AI writes) | each package's own (MIT / BSD / Apache mostly) |
 
 ## Models
 | Model | What for | License |

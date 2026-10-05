@@ -88,6 +88,12 @@ $("personaRebuild").onclick = async () => {
   b.disabled = false; b.textContent = "Rebuild profile";
 };
 $("memAuto").onchange = async () => { await api("/api/settings", json("PUT", { memory_auto: $("memAuto").checked })); };
+// 📐 Geometric reasoning: questions with numbers / shapes / logic are worked out as a program in the sandbox
+api("/api/settings").then(s => { $("geoOn").checked = !!s.geo_reasoning; }).catch(() => {});
+$("geoOn").onchange = async () => {
+  try { await api("/api/settings", json("PUT", { geo_reasoning: $("geoOn").checked })); }
+  catch (e) { $("geoOn").checked = !$("geoOn").checked; alert(e.message); }
+};
 onPage("memory", async () => {
   paint(await api("/api/memory"));
   paintSandbox(await api("/api/sandbox"));

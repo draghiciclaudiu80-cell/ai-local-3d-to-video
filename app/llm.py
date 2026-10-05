@@ -35,8 +35,8 @@ class LLM:
         return self.proc is not None and self.proc.poll() is None
 
     async def ensure(self, model: str, ctx: int = 8192, gpu: bool = True) -> None:
-        async with self.lock:
-            if self.running() and self.model == model and self.gpu == gpu:
+        async with self.lock:  # a bigger memory length than loaded (the app maker asks for 16k) = load again
+            if self.running() and self.model == model and self.gpu == gpu and getattr(self, "ctx", 0) >= ctx:
                 return
             self.stop()
             proj = projector_for(Path(model))
@@ -58,7 +58,7 @@ class LLM:
             with self.plock:
                 proc = spawn(args, stdout=log, stderr=subprocess.STDOUT, creationflags=NO_WINDOW,
                                         env=lib_env(ENGINES / "llama"))
-                self.proc, self.model, self.gpu, self.vision = proc, model, gpu, bool(proj)
+                self.proc, self.model, self.gpu, self.vision, self.ctx = proc, model, gpu, bool(proj), ctx
             async with httpx.AsyncClient(timeout=2, headers=AUTH) as c:
                 for _ in range(240):
                     if proc.poll() is not None:

@@ -3,6 +3,10 @@ import { initChat } from "./chat.js";
 import "./create.js";
 import "./gallery.js";
 import "./computer.js";
+import "./apps.js";
+import "./team.js";
+import "./forge.js";
+import "./tasks.js";
 import "./memory.js";
 import "./models.js";
 import "./settings.js";
@@ -135,11 +139,30 @@ async function dock() {
   $("dockCancel").hidden = !run;
 }
 export async function stopEverything() {
-  if (!confirm("Stop everything that's being made (pictures, videos, merges, movies, 3D models)?")) return;
+  if (!confirm("Stop everything that's being made or done (pictures, videos, merges, movies, 3D models, computer use)?")) return;
   try { await api("/api/stop-all", { method: "POST" }); } catch (e) { alert(e.message); }
   health(); dock();
 }
 $("stopAll").onclick = stopEverything;
+// "—" on a card (Team › Jobs, The experts): minimise it to its title row, remembered on this PC
+const folded = new Set((() => { try { return JSON.parse(store.get("folded", "[]")); } catch { return []; } })());
+const paintFold = id => { const c = $(id); if (c) c.classList.toggle("folded", folded.has(id)); };
+document.querySelectorAll("[data-fold]").forEach(b => paintFold(b.dataset.fold));
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-fold]");
+  if (!b) return;
+  const id = b.dataset.fold;
+  if (folded.has(id)) folded.delete(id); else folded.add(id);
+  store.set("folded", JSON.stringify([...folded])); paintFold(id);
+});
+// Create's tab bar: Image / Video / Movie / 3D are on the Create page; Apps and Forge are pages of their own that show
+// the same tab bar ("data-go" = the page, "data-tab" = Create's tab to open there)
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-go]");
+  if (!b) return;
+  show(b.dataset.go);
+  if (b.dataset.tab) document.querySelector(`#createTabs [data-t="${b.dataset.tab}"]`)?.click();
+});
 $("dockCancel").onclick = async () => {
   if (dock3d && confirm("Stop the 3D model that's being made?")) {
     await api(`/api/plugin-runs/${dock3d}/stop`, { method: "POST" }); dock(); health(); return;

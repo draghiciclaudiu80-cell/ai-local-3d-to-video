@@ -1,5 +1,6 @@
 import { $, api, button, el, esc, icon, isSpeaking, json, onPage, show, speak, speech, stopSpeaking, store, talker } from "./core.js";
 import { model3dCard } from "./viewer3d.js";
+import { liveCard } from "./computer.js";
 import { openPaper, paperCard, printCard } from "./print3d.js";
 import { calcCard } from "./calc.js";
 import { putProject } from "./project.js";
@@ -68,7 +69,7 @@ function links(html) {  // html = already-escaped text
     return `<a href="${u}" title="${u}">${shown}</a>${tail}`;
   });
 }
-function inline(text) {
+export function inline(text) {
   return links(esc(text).replace(/^#{1,6}\s+(.+)$/gm, "<b>$1</b>").replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
     .replace(/(?<![*\w])\*(?!\s)([^*\n]+?)(?<!\s)\*(?![*\w])/g, "<i>$1</i>").replace(/`([^`\n]+)`/g, "<code>$1</code>"));
 }
@@ -342,6 +343,12 @@ function addMsg(m) {
   (extra.models3d || []).forEach(m => d.insertBefore(model3dCard(m, esc), body));
   (extra.prints || []).forEach(r => d.insertBefore(printCard(r), body));  // "print it": G-code for the user's printer
   (extra.calcs || []).forEach(c => d.insertBefore(calcCard(c), body));  // a calculator's exact numbers
+  if (extra.team) d.insertBefore(teamCard(extra.team), body);  // the agent team working on this chat's job
+  if (extra.computer) d.insertBefore(liveCard(extra.computer), body);  // computer use: watch + Allow each step right here
+  if (extra.forge) d.insertBefore(forgeCard(extra.forge), body);  // a new skill (a draft): try it, turn it on
+  if (extra.bg) d.insertBefore(bgCard(extra.bg), body);  // an app / skill being made in the background for this chat
+  if (extra.geo) d.insertBefore(geoCard(extra.geo), body);  // 📐 the answer's working: computed in the sandbox
+  if (extra.apps?.length) d.insertBefore(appCards(extra.apps), body);  // apps the app maker / the Coder built
   if (extra.project) putProject(d, extra.project, body, projHandlers);  // a build project: the part-by-part checklist
   if (extra.paper) d.insertBefore(paperCard(extra.paper), body);  // "print this picture / text" on paper
   if (extra.tools?.length) d.insertBefore(el("div", "tool", `${icon("tool")} Used: ${esc(extra.tools.join(", "))}`), body);
@@ -458,7 +465,8 @@ function toolCard(e) {
   const names = { create_image: "Image", create_video: "Video clip", make_movie: "Movie", web_search: "Web search",
     read_webpage: "Read page", search_images: "Picture search", search_videos: "Video search", add_sound: "Voice & music", join_videos: "Join videos", use_computer: "Computer use", check_progress: "Progress", list_options: "Options", remember: "Memory" };
   const card = el("div", "tool" + (r.error || r.denied ? " bad" : ""));
-  let text = `${icon("tool")} <b>${esc(names[e.tool] || e.tool)}</b> `;
+  const label = e.tool.startsWith("skill_") ? `🛠 Skill: ${r.skill || "your skill"}` : names[e.tool] || e.tool;  // a Forge skill
+  let text = `${icon("tool")} <b>${esc(label)}</b> `;
   if (r.error) text += `— failed: ${esc(r.error)}`;
   else if (r.denied) text += "— you said no";
   else if (r.started) text += `— started${r.scenes ? ` · ${r.scenes} scenes` : ""}${r.takes ? ` · ${r.takes}` : r.minutes ? ` · about ${r.minutes} min` : ""}`;
@@ -472,9 +480,124 @@ function toolCard(e) {
   else text += "— done";
   card.innerHTML = text;
   if (r.started && e.tool !== "use_computer") card.append(button("Open queue", "sm", () => show("create")));
-  if (e.tool === "use_computer" && r.started) card.append(button("Watch & approve", "sm primary", () => show("computer")));
+  if (e.tool === "use_computer" && r.task) card.append(liveCard(r.task));  // watch + approve right here: you stay in the chat
 
   return card;
+}
+
+/** The agent team on this chat's job: live steps (✓ / ⚙️ / ✕ with the judge's reason), Stop, and the chat refreshes
+ *  as the experts post their work (3D models, apps, sources, the reviewer's result) below. */
+function teamCard(jid) {
+  const card = el("div", "teamcard");
+  let shown = -1;
+  const ICON = { waiting: "…", working: "⚙️", done: "✓", failed: "✕" };
+  async function tick() {
+    if (!card.isConnected && card.dataset.seen) return;  // the chat moved on
+    if (card.isConnected) card.dataset.seen = "1";
+    let st;
+    try { st = await api("/api/team"); } catch { setTimeout(tick, 3000); return; }
+    const j = st.jobs.find(x => x.id === jid), live = st.running.includes(jid) || (st.queued || []).includes(jid);
+    if (!j) { card.innerHTML = `<span class="muted small">👥 This team job was deleted.</span>`; return; }
+    const emo = Object.fromEntries(st.agents.map(a => [a.name, a.emoji]));
+    card.innerHTML = `<div class="row"><b class="grow">👥 Team — ${esc({ waiting: "starting…", queued: "queued — starts after the job before it", planning: "planning…", working: "working…",
+      reviewing: "reviewing…", done: "done ✓", failed: "couldn't finish", stopped: "stopped" }[j.status] || j.status)}</b></div>`
+      + (j.steps || []).map(s => `<div class="small">${emo[s.agent] || "🤖"} <b>${esc(s.agent)}</b> ${ICON[s.status] || ""}${s.tries > 1 ? " (2nd try)" : ""} — ${esc(s.task)}`
+        + (s.status === "failed" && s.judge ? ` <span class="fitbad">— ${esc(s.judge)}</span>` : "") + `</div>`).join("");
+    if (live) card.querySelector(".row").append(button("Stop", "sm danger", async () => { await api(`/api/team/jobs/${jid}/stop`, { method: "POST" }); tick(); }));
+    const done = (j.steps || []).filter(s => ["done", "failed"].includes(s.status)).length + (j.final ? 1 : 0);
+    if (shown >= 0 && done !== shown && chatId) openChat(chatId, true);  // new expert work was posted in this chat
+    shown = done;
+    if (live) setTimeout(tick, 2500);
+  }
+  tick();
+  return card;
+}
+
+/** An app / skill being made in the BACKGROUND for this chat: its live state + Stop. The result is posted into the chat
+ *  when it's ready (the chat refreshes by itself on the "task-done" notice). */
+function bgCard(id) {
+  const c = el("div", "bgcard small");
+  const t0 = Date.now();
+  async function tick() {
+    if (!c.isConnected && c.dataset.seen) return;  // the chat moved on
+    if (c.isConnected) c.dataset.seen = "1";
+    let t;
+    try { t = (await api("/api/tasks")).tasks.find(x => x.id === id); } catch {}
+    c.hidden = !t;  // an old message: its task left the list long ago
+    if (!t) { if (Date.now() - t0 < 8000) setTimeout(tick, 2500); return; }
+    const secs = Math.round((t.ended || Date.now() / 1000) - t.started);
+    const live = t.status === "running";
+    c.innerHTML = live ? `⚙️ Working on it in the background · ${secs < 60 ? secs + "s" : Math.floor(secs / 60) + "m " + (secs % 60) + "s"} — you can keep chatting`
+      : t.status === "done" ? "✓ Ready — the result is below." : t.status === "failed" ? `<span class="fitbad">✕ ${esc(t.error || "failed")}</span>` : "■ Stopped";
+    if (live) {
+      c.append(" ", button("Stop", "sm danger", async () => { await api(`/api/tasks/${id}/stop`, { method: "POST" }).catch(() => {}); tick(); }));
+      setTimeout(tick, 2500);
+    }
+  }
+  tick();
+  return c;
+}
+window.addEventListener("task-done", e => { if (e.detail.chat && e.detail.chat === chatId) openChat(chatId, true); });
+
+/** 📐 Geometric reasoning: the answer was worked out by a program in the sandbox (and re-run with other numbers). */
+function geoCard(g) {
+  const val = v => typeof v === "number" ? +v.toFixed(6) : esc(String(v));
+  const ins = Object.entries(g.inputs || {}).map(([k, v]) => `${esc(k)} = ${val(v)}`).join(", ");
+  const steps = Object.entries(g.steps || {}).map(([k, v]) => `<div>${esc(k)} = <b>${val(v)}</b></div>`).join("");
+  const changed = Object.entries(g.changed || {}).map(([k, [a, b]]) => `${esc(k)} ${val(a)} → <b>${val(b)}</b>`).join(", ");
+  const c = el("details", "tool geocard", `<summary>📐 <b>${changed ? "Changed: " + changed + " —" : "Worked out with code —"}</b> answer: <b>${val(g.answer)} ${esc(g.unit || "")}</b>
+    · <span class="${String(g.check).startsWith("⚠") || String(g.check).startsWith("failed") ? "fitbad" : ""}">${esc(g.check || "")}</span></summary>
+    <div class="small">${ins ? `<div class="muted">Inputs: ${ins}</div>` : ""}${steps}
+    ${g.perturbed ? `<div class="muted">Changed numbers: ${esc(Object.entries(g.perturbed.inputs).map(([k, v]) => k + " = " + v).join(", "))} → ${val(g.perturbed.answer)}</div>` : ""}</div>
+    <pre class="mono small">${esc(g.code || "")}</pre>`);
+  return c;
+}
+
+/** A skill the Forge made in this chat: a DRAFT — try it here (in the sandbox), turn it on, or open it in Forge. */
+function forgeCard(k) {
+  const c = el("div", "forgecard", `<div class="row"><b class="grow">🛠 ${esc(k.name)}</b><span class="small ${k.ok ? "" : "fitbad"}">${k.ok ? "✓ passed its test" : "⚠ fails its test"}</span></div>`);
+  const out = el("pre", "mono small"); out.hidden = true;
+  const state = el("span", "muted small grow");
+  const row = el("div", "row");
+  const refresh = async () => {
+    try {
+      const s = await api(`/api/forge/${k.id}`);
+      state.textContent = s.active ? `On (version ${s.active}) — I can use it in chats` : "Draft — not used until you turn it on";
+      on.hidden = !k.ok || s.active === s.versions;
+    } catch { state.textContent = "This skill was deleted."; row.querySelectorAll("button").forEach(b => b.disabled = true); }
+  };
+  const on = button("✓ Turn on", "sm primary", async () => {
+    try { await api(`/api/forge/${k.id}/on`, json("POST", {})); } catch (e) { alert(e.message); }
+    refresh();
+  });
+  row.append(button("▶ Try it", "sm", async () => {
+    out.hidden = false; out.textContent = "Running in the sandbox…";
+    try {
+      const r = await api(`/api/forge/${k.id}/run`, json("POST", { params: {} }));
+      out.textContent = r.ok ? JSON.stringify(r.result, null, 2) : "✕ " + r.error;
+    } catch (e) { out.textContent = "✕ " + e.message; }
+  }), on, button("Open in Forge", "sm ghost", () => { show("forge"); window.dispatchEvent(new CustomEvent("open-skill", { detail: k.id })); }));
+  c.append(state, row, out);
+  refresh();
+  return c;
+}
+
+/** Apps the app maker built for this chat: try it right here (sealed), open it in Apps, open its project folder. */
+function appCards(list) {
+  const box = el("div", "appcards");
+  for (const a of list) {
+    const c = el("div", "appcard", `<div class="row"><b class="grow">💻 ${esc(a.label)}</b><span class="small ${a.ok ? "" : "fitbad"}">${a.ok ? "✓ tested" : "⚠ check it"}</span></div>`);
+    const frame = el("iframe", "appframe mini"); frame.setAttribute("sandbox", "allow-scripts allow-pointer-lock allow-modals"); frame.hidden = true;
+    const row = el("div", "row");
+    row.append(button("▶ Try it here", "sm primary", async () => {
+      if (!frame.hidden) { frame.hidden = true; return; }
+      try { frame.srcdoc = (await api(`/api/apps/${a.id}`)).sealed; frame.hidden = false; } catch (e) { alert(e.message); }
+    }), button("Open in Apps", "sm", () => { show("apps"); window.dispatchEvent(new CustomEvent("open-app", { detail: a.id })); }));
+    if (a.folder) row.append(button("📁 Open folder", "sm ghost", () => api(`/api/apps/${a.id}/open-folder`, { method: "POST" }).catch(e => alert(e.message))));
+    c.append(row, frame);
+    box.append(c);
+  }
+  return box;
 }
 
 function askCard(a) {
@@ -490,7 +613,6 @@ function askCard(a) {
     row.querySelectorAll("button").forEach(b => b.disabled = true);
     try { await api(`/api/approve/${a.id}`, json("POST", { ok, always })); } catch (e) { alert(e.message); }
     card.firstChild.innerHTML += ok ? " <b>— allowed</b>" : " <b>— declined</b>";
-    if (ok && a.tool === "use_computer") show("computer");
   };
   row.append(button("Allow", "primary sm", () => decide(true, false)));
   if (!["use_computer", "download_file"].includes(a.tool)) row.append(button("Always allow web", "sm", () => decide(true, true)));
@@ -554,6 +676,11 @@ export async function send(text, imgs = [], opts = {}) {
         if (e.model3d) { d.querySelector(".prog3d")?.remove(); d.insertBefore(model3dCard(e.model3d, esc), body); }
         if (e.print3d) d.insertBefore(printCard(e.print3d), body);
         if (e.calc) d.insertBefore(calcCard(e.calc), body);
+        if (e.team) d.insertBefore(teamCard(e.team), body);
+        if (e.apps?.length) d.insertBefore(appCards(e.apps), body);
+        if (e.forge) d.insertBefore(forgeCard(e.forge), body);
+        if (e.bg) d.insertBefore(bgCard(e.bg), body);
+        if (e.geo) d.insertBefore(geoCard(e.geo), body);
         if (e.project) putProject(d, e.project, body, projHandlers);
         if (e.paper) d.insertBefore(paperCard(e.paper), body);
         if (e.choices) setTimeout(() => d.append(choiceBox(e.choices)), 0);

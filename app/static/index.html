@@ -15,7 +15,8 @@
     <button data-p="chat"><svg class="i"><use href="#i-chat"/></svg><span>Chat</span></button>
     <button data-p="create"><svg class="i"><use href="#i-spark"/></svg><span>Create</span></button>
     <button data-p="gallery"><svg class="i"><use href="#i-image"/></svg><span>Gallery</span></button>
-    <button data-p="computer"><svg class="i"><use href="#i-cursor"/></svg><span>Computer use</span></button>
+    <button data-p="computer" title="Computer use — and Background tasks (everything working on its own)"><svg class="i"><use href="#i-cursor"/></svg><span>Computer use</span><b id="bgCount" class="bgcount" hidden>0</b></button>
+    <button data-p="team"><svg class="i"><use href="#i-tool"/></svg><span>Team</span></button>
     <button data-p="memory"><svg class="i"><use href="#i-brain"/></svg><span>Memory</span></button>
     <button data-p="models"><svg class="i"><use href="#i-download"/></svg><span>Models</span></button>
   </nav>
@@ -76,8 +77,8 @@
 
   <!-- CREATE -->
   <section class="page" id="p-create">
-    <div class="page-head"><h1>Create</h1><span class="sub">Images, video clips and whole movies — made on this PC.</span></div>
-    <div class="tabs" id="createTabs"><button data-t="image">Image</button><button data-t="video">Video</button><button data-t="movie">Movie</button><button data-t="model">3D</button></div>
+    <div class="page-head"><h1>Create</h1><span class="sub">Images, video clips, movies, 3D models, apps and new skills — made on this PC.</span></div>
+    <div class="tabs" id="createTabs"><button data-t="image">Image</button><button data-t="video">Video</button><button data-t="movie">Movie</button><button data-t="model">3D</button><button data-go="apps">Apps</button><button data-go="forge">Forge</button></div>
     <div class="page-body">
       <div class="split">
         <div class="card" id="c-image">
@@ -188,16 +189,40 @@
 
   <!-- COMPUTER USE -->
   <section class="page" id="p-computer">
-    <div class="page-head"><h1>Computer use</h1><span class="sub">A vision model looks at your screen and proposes one step at a time. Nothing happens until you approve. This window hides while it looks and acts, then comes back for your OK.</span></div>
+    <div class="page-head"><h1>Computer use</h1><span class="sub">The AI works in the app's own browser or on this PC's screen, one step at a time — nothing happens until you approve. You can browse yourself too.</span></div>
     <div class="page-body">
-      <div class="card">
-        <div class="row"><label class="f grow">What should it do?<input id="cuTask" placeholder="Open Notepad and write a shopping list: milk, eggs, bread"></label><button class="btn primary" id="cuGo"><svg class="i"><use href="#i-play"/></svg>Start</button></div>
-        <span class="muted small">Emergency stop: slam the mouse into any corner of the screen. Model: <b class="mono" id="cuModel">—</b></span>
-      </div>
-      <div class="cu" id="cuLive" hidden>
-        <div class="card"><div class="row"><h3 class="grow" id="cuStatus">Working</h3><button class="btn danger sm" id="cuStop"><svg class="i"><use href="#i-stop"/></svg>Stop</button></div>
-          <div class="shot"><img id="cuShot" alt="Latest screenshot" onerror="this.hidden=true" onload="this.hidden=false"><div class="mark" id="cuMark" hidden></div></div></div>
-        <div class="card"><div id="cuProposal"></div><h3>Steps</h3><div class="steps" id="cuSteps"></div></div>
+      <div class="cu2">
+        <div class="cu-left">
+          <div class="card">
+            <div class="seg" id="cuWhere"><button data-w="browser">🌐 In the browser</button><button data-w="desktop">🖥 On this PC</button></div>
+            <div class="row"><input id="cuTask" class="grow" placeholder="Find the opening hours of the Cluj botanical garden"><button class="btn primary" id="cuGo"><svg class="i"><use href="#i-play"/></svg>Start</button></div>
+            <span class="muted small" id="cuHint"></span>
+            <span class="muted small">Model: <b class="mono" id="cuModel">—</b></span>
+          </div>
+          <div class="card cu-run" id="cuLive" hidden>
+            <div class="row"><h3 class="grow" id="cuStatus">Working</h3><button class="btn danger sm" id="cuStop"><svg class="i"><use href="#i-stop"/></svg>Stop</button></div>
+            <div id="cuProposal"></div>
+            <div class="steps cu-steps" id="cuSteps"></div>
+          </div>
+        </div>
+        <div class="card cu-right">
+          <div class="seg" id="cuView"><button data-v="browser">🌐 Browser</button><button data-v="screen">🖥 Screen</button><button data-v="tasks">⏳ Background tasks <b id="bgCount2" class="bgcount" hidden>0</b></button></div>
+          <div id="vTasks" hidden>
+            <div class="muted small">Everything working on its own — apps, skills, team jobs, computer use, 3D builds, pictures and downloads. They keep going while you chat or use other pages; you get a notice when one is ready.</div>
+            <div id="bgList" class="bglist"></div>
+          </div>
+          <div id="vBrowser">
+            <div class="btabs" id="bTabs"></div>
+            <div class="bbar"><button class="btn sm ghost" id="bBack" title="Back">←</button><button class="btn sm ghost" id="bFwd" title="Forward">→</button><button class="btn sm ghost" id="bReload" title="Reload">⟳</button>
+              <input id="bUrl" placeholder="Search or type an address — Enter to go">
+              <label class="small btor" title="All pages go through Tor: private, slower"><input type="checkbox" id="bTor"> 🧅 Tor</label>
+              <button class="btn sm ghost" id="bClear" title="Close the browser and delete its cookies, history and logins">🧹</button></div>
+            <div class="bview" id="bView" tabindex="0"><img id="bImg" alt="" hidden><div class="bempty" id="bEmpty">The browser is closed — type an address or search words above.</div></div>
+            <div class="muted small">Click into the page and type. Downloads are blocked; pages are never trusted as orders for the AI.</div>
+          </div>
+          <div id="vScreen" hidden><div class="shot"><img id="cuShot" alt="Latest screenshot" onerror="this.hidden=true" onload="this.hidden=false"><div class="mark" id="cuMark" hidden></div></div>
+            <div class="muted small">Emergency stop on the desktop: slam the mouse into any corner of the screen.</div></div>
+        </div>
       </div>
     </div>
   </section>
@@ -211,6 +236,9 @@
         <div class="row"><label class="row grow" style="align-items:center"><input type="checkbox" id="memAuto" style="min-height:0"> Learn facts from my chats automatically</label>
           <button class="btn sm" id="personaRebuild">Rebuild profile</button></div>
         <div class="muted small mono" id="memStats"></div></div>
+      <div class="card"><h3>Reasoning</h3>
+        <label class="row" style="align-items:center"><input type="checkbox" id="geoOn" style="min-height:0"> <b>📐 Geometric reasoning — compute, don't guess</b></label>
+        <span class="muted small">For questions with sizes, angles, distances, counts, dates or logic, the AI doesn't guess the number: it writes the problem as a small program (every quantity named, shapes and positions as coordinates), runs it in the sandbox, re-runs it with changed numbers to check it really works it out (the “perturbation test”), and answers from the result — a 📐 card shows the working. About 10-30 s more on such questions; pictures, 3D, apps and normal talk aren't affected. It can't change how a model thinks inside (that is done when a model is trained); it makes its answers rest on computation.</span></div>
       <div class="card"><h3>What it remembers</h3>
         <div class="row"><input id="factIn" class="grow" placeholder="Something to remember, e.g. my printer is 256 x 256 x 256 mm"><button class="btn primary" id="factAdd">Remember</button></div>
         <details class="mgroup" open><summary>📌 Rules — always followed <span class="muted small" id="nRules"></span></summary><div class="mlist" id="rulesList"></div></details>
@@ -228,6 +256,91 @@
   </section>
 
   <!-- MODELS -->
+  <!-- APPS -->
+  <section class="page" id="p-apps">
+    <div class="page-head"><h1>Create</h1><span class="sub">Apps: describe an app, game or tool — the local AI writes it, checks the code and uses it in a hidden browser; it runs here sealed (no internet, no access to your files or chats). Change it in plain words.</span></div>
+    <div class="tabs"><button data-go="create" data-tab="image">Image</button><button data-go="create" data-tab="video">Video</button><button data-go="create" data-tab="movie">Movie</button><button data-go="create" data-tab="model">3D</button><button class="on">Apps</button><button data-go="forge">Forge</button></div>
+    <div class="page-body">
+      <div class="apps2">
+        <div class="apps-left">
+          <div class="card">
+            <textarea id="appPrompt" rows="3" placeholder="A snake game with a high score · a 3D-print cost calculator (grams, price per kg, hours) · a pomodoro timer"></textarea>
+            <div class="row"><button class="btn primary" id="appMake"><svg class="i"><use href="#i-spark"/></svg>Make it</button><button class="btn danger sm" id="appStop" hidden>Stop</button>
+              <span class="muted small grow" id="appStatus"></span></div>
+          </div>
+          <div class="card"><h3>My apps</h3><div class="mlist" id="appList"></div></div>
+        </div>
+        <div class="card apps-right">
+          <div class="row"><h3 class="grow" id="appTitle">No app open</h3>
+            <button class="btn sm ghost" id="appFull" title="Bigger" hidden>⤢</button>
+            <button class="btn sm ghost" id="appCodeBtn" hidden>Code</button>
+            <button class="btn sm ghost" id="appUndo" hidden title="Back to the version before the last change">↶ Undo</button>
+            <button class="btn sm ghost" id="appSave" hidden title="Save as an .html file">Save file</button>
+            <button class="btn sm ghost" id="appExport" hidden title="Save as a real project folder on your Desktop (index.html, style.css, app.js, README)">📁 Save to a folder</button></div>
+          <div class="muted small" id="appReceipt"></div>
+          <iframe id="appFrame" class="appframe" sandbox="allow-scripts allow-pointer-lock allow-modals" title="App preview"></iframe>
+          <pre class="appcode mono" id="appCode" hidden></pre>
+          <div class="row" id="appChangeRow" hidden><input id="appChange" class="grow" placeholder="Change it: make the snake faster, add a pause button, dark blue colours…"><button class="btn" id="appChangeGo">Change</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FORGE -->
+  <section class="page" id="p-forge">
+    <div class="page-head"><h1>Create</h1><span class="sub">Forge: new skills the local AI writes for itself. Each one runs in a locked sandbox (no files, no internet, no programs) and stays a draft until you try it and turn it on. Every version is kept.</span></div>
+    <div class="tabs"><button data-go="create" data-tab="image">Image</button><button data-go="create" data-tab="video">Video</button><button data-go="create" data-tab="movie">Movie</button><button data-go="create" data-tab="model">3D</button><button data-go="apps">Apps</button><button class="on">Forge</button></div>
+    <div class="page-body">
+      <div class="apps2">
+        <div class="apps-left">
+          <div class="card">
+            <textarea id="forgePrompt" rows="3" placeholder="A skill that shows my CPU and RAM use · convert any unit (mm, inches, kg, lb…) · count the days until a date · a strong password maker"></textarea>
+            <div class="row"><button class="btn primary" id="forgeMake"><svg class="i"><use href="#i-forge"/></svg>Make the skill</button><button class="btn danger sm" id="forgeStop" hidden>Stop</button>
+              <span class="muted small grow" id="forgeStatus"></span></div>
+            <span class="muted small">Or in any chat: “make a skill that …”.</span>
+          </div>
+          <div class="card"><h3>My skills</h3><div class="mlist" id="forgeList"></div></div>
+        </div>
+        <div class="card apps-right">
+          <div class="row"><h3 class="grow" id="forgeTitle">No skill open</h3>
+            <button class="btn sm ghost" id="forgeCodeBtn" hidden>Code</button>
+            <button class="btn sm ghost" id="forgeUndo" hidden title="Remove the newest version (a change you didn't like)">↶ Undo</button>
+            <button class="btn sm danger" id="forgeDel" hidden>Delete</button></div>
+          <div id="forgeState" class="forge-state"></div>
+          <div class="muted small" id="forgeDesc"></div>
+          <div id="forgeInputs" class="forge-inputs"></div>
+          <div class="row" id="forgeRunRow" hidden><button class="btn" id="forgeRun"><svg class="i"><use href="#i-play"/></svg>Run it (sandbox)</button>
+            <button class="btn primary" id="forgeOn" hidden><svg class="i"><use href="#i-check"/></svg>Turn on</button>
+            <button class="btn" id="forgeOff" hidden>Turn off</button></div>
+          <pre class="appcode mono forge-out" id="forgeOut" hidden></pre>
+          <pre class="appcode mono" id="forgeCode" hidden></pre>
+          <div class="muted small" id="forgeVersions"></div>
+          <div class="row" id="forgeChangeRow" hidden><input id="forgeChange" class="grow" placeholder="Change it: show the numbers in GB, add the disk space, round to whole numbers…"><button class="btn" id="forgeChangeGo">Change</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TEAM -->
+  <section class="page" id="p-team">
+    <div class="page-head"><h1>Team</h1><span class="sub">A team of expert agents that work on one job together: a Planner gives each expert a step, they use the app's tools, a Reviewer writes the result.</span></div>
+    <div class="page-body">
+      <div class="card"><div class="row"><label class="row grow" style="align-items:center"><input type="checkbox" id="teamOn" style="min-height:0"> <b>Agent team on</b></label>
+        <span class="muted small" id="teamWhy">Off: a job runs several AI turns one after another — turn it on when you have the computing power (a strong PC or a fast model).</span></div></div>
+      <div class="team2">
+        <div class="apps-left">
+          <div class="card"><h3>Give the team a job</h3><span class="muted small">Or in any chat: “use the team to …”. The team's work appears in a chat, the 3D models in the Gallery, the apps in Apps.</span>
+            <textarea id="teamGoal" rows="3" placeholder="Plan a 3D-printed phone stand for my desk: find typical phone sizes, work out the angle, make the model"></textarea>
+            <div class="row"><select id="teamDaily"><option value="">Once</option></select><button class="btn primary" id="teamGo"><svg class="i"><use href="#i-play"/></svg>Start</button></div></div>
+          <div class="card" id="teamJobsCard"><div class="row cardhead"><h3 class="grow">Jobs</h3><button class="btn sm ghost" id="teamClear" title="Delete every finished job from this list (their chats stay in Chat)">🗑 Clear finished</button><button class="btn sm ghost fold" data-fold="teamJobsCard" title="Minimize / open">—</button></div><div id="teamJobs" class="team-jobs"></div></div>
+        </div>
+        <div class="card" id="teamAgentsCard"><div class="row cardhead"><h3 class="grow">The experts</h3><button class="btn sm ghost fold" data-fold="teamAgentsCard" title="Minimize / open">—</button></div><span class="muted small">Switch experts on / off, change what they do, or add your own.</span>
+          <div id="teamAgents" class="team-agents"></div>
+          <div class="row"><button class="btn sm" id="teamAdd"><svg class="i"><use href="#i-plus"/></svg>Add an expert</button><button class="btn sm primary" id="teamSave">Save the team</button></div></div>
+      </div>
+    </div>
+  </section>
+
   <section class="page" id="p-models">
     <div class="page-head"><h1>Models</h1><span class="sub mono" id="hwLine"></span></div>
     <div class="tabs" id="modelTabs">
@@ -300,6 +413,7 @@
   </div>
 </main>
 <div id="lightbox" hidden><img alt=""></div>
+<div id="toasts" class="toasts"></div>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
@@ -313,6 +427,8 @@
   <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 2v5M15 2v5M6 7h12v4a6 6 0 0 1-12 0zM12 17v5"/></symbol>
   <symbol id="i-code" viewBox="0 0 24 24"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/></symbol>
+  <symbol id="i-tasks" viewBox="0 0 24 24"><path d="M4 6h10M4 12h7M4 18h10M17 4v4l3 1M17 13a4 4 0 1 0 0.01 0"/></symbol>
+  <symbol id="i-forge" viewBox="0 0 24 24"><path d="M3 8h13l-1.5 3H10v2a4 4 0 0 0 4 4v2H6v-2a3 3 0 0 0 2-3v-2H5zM18 5l2-2M19 8h2M16 4V2"/></symbol>
   <symbol id="i-tool" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></symbol>
   <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10a7 7 0 0 1-14 0M12 19v3"/></symbol>
   <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></symbol>
